@@ -117,17 +117,17 @@ main {
 	padding: 0 1rem;
 }
 
-@font-face { font-family: manchu0; src: url('http://localhost:5000/lexigraphy/fonts/XM_BiaoHei.ttf'); }
-@font-face { font-family: manchu1; src: url('http://localhost:5000/lexigraphy/fonts/XM_GuFeng.ttf'); }
-@font-face { font-family: manchu2; src: url('http://localhost:5000/lexigraphy/fonts/XM_LiuYe.ttf'); }
-@font-face { font-family: manchu3; src: url('http://localhost:5000/lexigraphy/fonts/XM_ShuKai.ttf'); }
-@font-face { font-family: manchu4; src: url('http://localhost:5000/lexigraphy/fonts/XM_WenJian.ttf'); }
-@font-face { font-family: manchu5; src: url('http://localhost:5000/lexigraphy/fonts/XM_WenQin.ttf'); }
-@font-face { font-family: manchu6; src: url('http://localhost:5000/lexigraphy/fonts/XM_XingShu.ttf'); }
-@font-face { font-family: manchu7; src: url('http://localhost:5000/lexigraphy/fonts/XM_YaBai.ttf'); }
-@font-face { font-family: manchu8; src: url('http://localhost:5000/lexigraphy/fonts/XM_YingBi.ttf'); }
-@font-face { font-family: manchu9; src: url('http://localhost:5000/lexigraphy/fonts/XM_ZhengBai.ttf'); }
-@font-face { font-family: manchu10; src: url('http://localhost:5000/lexigraphy/fonts/XM_ZhengHei.ttf'); }
+@font-face { font-family: manchu0; src: url('/XM_BiaoHei.ttf'); }
+@font-face { font-family: manchu1; src: url('/XM_GuFeng.ttf'); }
+@font-face { font-family: manchu2; src: url('/XM_LiuYe.ttf'); }
+@font-face { font-family: manchu3; src: url('/XM_ShuKai.ttf'); }
+@font-face { font-family: manchu4; src: url('/XM_WenJian.ttf'); }
+@font-face { font-family: manchu5; src: url('/XM_WenQin.ttf'); }
+@font-face { font-family: manchu6; src: url('/XM_XingShu.ttf'); }
+@font-face { font-family: manchu7; src: url('/XM_YaBai.ttf'); }
+@font-face { font-family: manchu8; src: url('/XM_YingBi.ttf'); }
+@font-face { font-family: manchu9; src: url('/XM_ZhengBai.ttf'); }
+@font-face { font-family: manchu10; src: url('/XM_ZhengHei.ttf'); }
 
 main.labelling {
 	display: flex;
