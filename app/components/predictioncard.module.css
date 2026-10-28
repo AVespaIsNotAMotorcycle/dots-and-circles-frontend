@@ -1,0 +1,96 @@
+.card {
+	padding: 1rem;
+	border: 2px solid black;
+	border-radius: 5px;
+	display: flex;
+	flex-direction: column;
+	max-width: 400px;
+	min-width: min(350px, 90svw);
+}
+
+.card details {
+	margin-bottom: 1rem;
+}
+.card details h4 {
+	display: inline;
+	font-weight: 800;
+}
+.card details summary {
+	padding-bottom: 1rem;
+	border-bottom: 1px solid black;
+	margin-bottom: 1rem;
+}
+
+.manchu {
+	font-family: manchu0;
+	font-size: 4rem;
+	writing-mode: vertical-lr;
+}
+
+.abkai {
+	font-weight: 800;
+	margin: 1rem 0;
+}
+
+.cardBody {
+	display: grid;
+	grid-template-columns: 1fr 1fr;
+	flex-grow: 1;
+	gap: 2rem;
+}
+
+.results {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+}
+.results > *:last-child {
+	margin-top: auto;
+}
+
+.ctc .diagram {
+	--scale: 3;
+	position: relative;
+	width: calc(32px * var(--scale));
+	border-radius: 5px;
+	overflow: hidden;
+	height: min-content;
+}
+
+.preprocessed {
+	width: 100%;
+}
+
+.ctc .tokens {
+	position: absolute;
+	inset: 0;
+}
+
+.tokenProb, .tokenProbHovered {
+	height: calc(4px * var(--scale));
+	opacity: .7;
+}
+.tokenProb {
+}
+.tokenProbHovered {
+	outline: 2px solid black;
+	opacity: .9;
+}
+
+.ctc figcaption {
+	margin-top: 1rem;
+}
+.ctc figcaption .figCapLabel {
+	margin-top: 2rem;
+	font-weight: 800;
+}
+.ctc figcaption ul {
+	font-size: .9rem;
+	opacity: .9;
+}
+
+.hoveredDetail {
+	min-height: 2rem;
+	display: flex;
+	justify-content: space-between;
+}
