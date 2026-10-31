@@ -19,6 +19,12 @@
 	}
 }
 
+.form {
+	display: flex;
+	flex-direction: row;
+	gap: 2rem;
+}
+
 .lexigraph figure {
 	width: fit-content;
 }
