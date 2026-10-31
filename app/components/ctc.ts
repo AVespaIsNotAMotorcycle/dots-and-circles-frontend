@@ -45,7 +45,11 @@ const MANCHU_TO_ABKAI = {
 	"᠊": "",
 };
 
+export function abkaiLetter(letter) {
+	return MANCHU_TO_ABKAI[letter] ?? '?';
+}
+
 // The Abkai spelling of each letter in a Manchu word, e.g. ᠠᠩᡤᠠ -> a, ng, g, a
 export function abkaiLetters(manchu) {
-	return manchu.split('').map((letter) => MANCHU_TO_ABKAI[letter] ?? '?');
+	return manchu.split('').map(abkaiLetter);
 }

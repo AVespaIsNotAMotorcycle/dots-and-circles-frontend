@@ -4,7 +4,9 @@ import axios from 'axios';
 import { useState, useEffect } from 'react';
 
 import ScoreCard from './ScoreCard';
-import { tokenToLetterIndex, letterColor, abkaiLetters } from './ctc';
+import {
+  tokenToLetterIndex, letterColor, abkaiLetter, abkaiLetters,
+} from './ctc';
 import styles from './predictioncard.module.css';
 const BACKEND = process.env.NEXT_PUBLIC_BACKEND
 
@@ -71,6 +73,34 @@ function AbkaiPrediction({ abkai, manchu, highlightedIndex }) {
   );
 }
 
+// One column of the CTC collapse, with a cell lined up with each image token.
+// cellText(index) gives the cell's letter, '·' for a blank, or '' for none.
+function CollapseColumn({ label, ctc, cellText, hovered, onHover }) {
+  return (
+	<div className={styles.collapseColumn}>
+	  <span className={styles.collapseLabel}>{label}</span>
+	  {ctc.map((_, index) => {
+		const text = cellText(index);
+		const isLetter = text && text !== '·';
+		const color = letterColor(tokenToLetterIndex(ctc, index));
+		return (
+		  <span
+			key={index}
+			className={hovered === index ? styles.collapseCellHovered
+			  : styles.collapseCell}
+			style={isLetter ? {
+			  backgroundColor: `rgba(${color.join(', ')}, .35)`,
+			} : undefined}
+			onMouseOver={() => { onHover(index); }}
+		  >
+			{text}
+		  </span>
+		);
+	  })}
+	</div>
+  );
+}
+
 export default function PredictionCard({
   name = "NAME MISSING",
   model = "MODEL DETAILS MISSING",
@@ -101,6 +131,15 @@ export default function PredictionCard({
   const scaleProb = (index) => 0.15 + 0.85 * probs[index];
   const tokenColor = (index) => (
 	`rgba(${[...indexToColor(index), scaleProb(index)].join(', ')})`);
+  // The three steps of CTC decoding, one cell per token
+  const startsRun = (index) => index === 0 || ctc[index] !== ctc[index - 1];
+  // Cells are spelled in Abkai, since Manchu letters are unreadable at one
+  // token's height. Invisible marks (variation selectors) show as ◌.
+  const rawCell = (index) => (ctc[index]
+	? abkaiLetter(ctc[index]) || '◌' : '·');
+  const mergedCell = (index) => (startsRun(index) ? rawCell(index) : '');
+  const wordCell = (index) => (startsRun(index) && ctc[index]
+	? rawCell(index) : '');
   const onMouseOver = (index) => {
 	  setHovered(index);
   };
@@ -122,6 +161,9 @@ export default function PredictionCard({
 			<figcaption>
 			  <span className={styles.figCapLabel}>CTC Output</span>
 			</figcaption>
+		  <div className={styles.collapse}>
+		    <div className={styles.collapseColumn}>
+			  <span className={styles.collapseLabel}>image</span>
 		    <div className={styles.diagram}>
               <img src={preprocessed} className={styles.preprocessed} />
               <div className={styles.tokens}>
@@ -142,6 +184,14 @@ export default function PredictionCard({
                 })}
               </div>
 			</div>
+			</div>
+			<CollapseColumn label="tokens" ctc={ctc} cellText={rawCell}
+			  hovered={hovered} onHover={onMouseOver} />
+			<CollapseColumn label="merged" ctc={ctc} cellText={mergedCell}
+			  hovered={hovered} onHover={onMouseOver} />
+			<CollapseColumn label="word" ctc={ctc} cellText={wordCell}
+			  hovered={hovered} onHover={onMouseOver} />
+		  </div>
 			<HoveredDetail hovered={hovered} ctc={ctc} probs={probs} />
 		  </figure>
         </div>

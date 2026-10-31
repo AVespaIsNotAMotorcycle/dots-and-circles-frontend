@@ -48,8 +48,12 @@
 	margin-top: auto;
 }
 
-.ctc .diagram {
+.ctc {
 	--scale: 3;
+	--token-height: calc(4px * var(--scale));
+}
+
+.ctc .diagram {
 	position: relative;
 	width: calc(32px * var(--scale));
 	border-radius: 5px;
@@ -67,7 +71,7 @@
 }
 
 .tokenProb, .tokenProbHovered {
-	height: calc(4px * var(--scale));
+	height: var(--token-height);
 	opacity: .7;
 }
 .tokenProb {
@@ -97,5 +101,29 @@
 }
 
 .highlightedLetter {
+	outline: 2px solid black;
+}
+
+.collapse {
+	display: flex;
+	gap: 2px;
+}
+.collapseColumn {
+	display: flex;
+	flex-direction: column;
+}
+.collapseLabel {
+	font-size: .7rem;
+	height: 1.2rem;
+	opacity: .8;
+}
+.collapseCell, .collapseCellHovered {
+	height: var(--token-height);
+	min-width: 1.5rem;
+	font-size: .7rem;
+	line-height: var(--token-height);
+	text-align: center;
+}
+.collapseCellHovered {
 	outline: 2px solid black;
 }
