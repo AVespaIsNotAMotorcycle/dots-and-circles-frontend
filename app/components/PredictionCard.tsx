@@ -30,6 +30,35 @@ function HoveredDetail({ hovered, ctc, probs }) {
 	}
 }
 
+function ManchuPrediction({ manchu, highlightedIndex }) {
+  return (
+	<p className={styles.manchu}>
+	  {manchu.split('').map((letter, index) => (
+		<span
+		  key={index}
+		  className={index == highlightedIndex ?
+			styles.highlightedLetter : undefined}>
+		  {letter}
+		</span>
+	  ))}
+	</p>
+  );
+}
+function AbkaiPrediction({ abkai, highlightedIndex }) {
+  return (
+	<p className={styles.abkai}>
+	  {abkai.split('').map((letter, index) => (
+		<span
+		  key={index}
+		  className={index == highlightedIndex ?
+			styles.highlightedLetter : undefined}>
+		  {letter}
+		</span>
+	  ))}
+	</p>
+  );
+}
+
 export default function PredictionCard({
   name = "NAME MISSING",
   model = "MODEL DETAILS MISSING",
@@ -99,6 +128,18 @@ export default function PredictionCard({
 	];
     return `linear-gradient(to bottom, ${colorStrings.join(', ')})`;
   };
+  const tokenToLetterIndex = (tokenIndex) => {
+    // CTC decoding collapses runs of the same token and drops blanks, so each
+    // new run of a non-blank token adds one letter to `manchu`. Blank tokens
+    // don't map to any letter and return -1.
+	if (!ctc[tokenIndex]) return -1;
+	var letterIndex = -1;
+	for (var i = 0; i <= tokenIndex; i++) {
+		const startsNewLetter = ctc[i] && ctc[i] !== ctc[i - 1];
+		if (startsNewLetter) letterIndex++;
+	}
+	return letterIndex;
+  };
   const onMouseOver = (index) => {
 	  setHovered(index);
   };
@@ -147,8 +188,14 @@ export default function PredictionCard({
         </div>
         <div className={styles.results}>
 		  <span className={styles.figCapLabel}>Model Prediction</span>
-          <p className={styles.manchu}>{manchu}</p>
-          <p className={styles.abkai}>{abkai}</p>
+		  <ManchuPrediction
+		    manchu={manchu}
+			highlightedIndex={tokenToLetterIndex(hovered)}
+		  />
+		  <AbkaiPrediction
+		    abkai={abkai}
+			highlightedIndex={tokenToLetterIndex(hovered)}
+		  />
           <ScoreCard score={score} />
         </div>
       </div>

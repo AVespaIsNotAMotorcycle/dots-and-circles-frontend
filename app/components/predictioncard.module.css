@@ -95,3 +95,7 @@
 .ctc {
 	max-width: min-content;
 }
+
+.highlightedLetter {
+	background-color: lightgreen;
+}
