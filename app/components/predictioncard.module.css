@@ -61,6 +61,11 @@
 	height: min-content;
 }
 
+.ctc .diagram:focus-visible {
+	outline: 3px solid black;
+	outline-offset: 2px;
+}
+
 .preprocessed {
 	width: 100%;
 }

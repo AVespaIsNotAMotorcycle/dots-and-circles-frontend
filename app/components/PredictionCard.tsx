@@ -91,6 +91,7 @@ function CollapseColumn({ label, ctc, cellText, hovered, onHover }) {
 			  backgroundColor: `rgba(${color.join(', ')}, .35)`,
 			} : undefined}
 			onMouseOver={() => { onHover(index); }}
+			onClick={() => { onHover(index); }}
 		  >
 			{text}
 		  </span>
@@ -142,6 +143,15 @@ export default function PredictionCard({
   const mergedCell = (index) => (startsRun(index) ? rawCell(index) : '');
   const wordCell = (index) => (startsRun(index) && ctc[index]
 	? rawCell(index) : '');
+  // Arrow keys step through the tokens, for keyboard users
+  const onKeyDown = (event) => {
+	const steps = { ArrowDown: 1, ArrowUp: -1 };
+	if (!(event.key in steps)) return;
+	event.preventDefault();
+	const next = (hovered ?? -1) + steps[event.key];
+	onHover(Math.min(Math.max(next, 0), ctc.length - 1));
+  };
+
   return (
     <section className={styles.card}>
       <details>
@@ -159,7 +169,13 @@ export default function PredictionCard({
 		  <div className={styles.collapse}>
 		    <div className={styles.collapseColumn}>
 			  <span className={styles.collapseLabel}>image</span>
-		    <div className={styles.diagram}>
+		    <div
+			  className={styles.diagram}
+			  tabIndex={0}
+			  aria-label="CTC tokens: use the up and down arrow keys to step through them"
+			  onFocus={() => { if (hovered === undefined) onHover(0); }}
+			  onKeyDown={onKeyDown}
+			>
               <img src={preprocessed} className={styles.preprocessed} />
               <div className={styles.tokens}>
                 {ctc.map((letter, index) => {
@@ -174,6 +190,7 @@ export default function PredictionCard({
 						className={styles[classKey]}
 						style={style}
 						onMouseOver={() => { onHover(index); }}
+						onClick={() => { onHover(index); }}
 					  />
 				  );
                 })}
