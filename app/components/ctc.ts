@@ -11,6 +11,8 @@ const LETTER_COLORS = [
 	[255, 20, 147],
 ];
 export const BLANK_COLOR = [128, 128, 128];
+// Every letter token's color in the quiet view, before anyone interacts
+export const QUIET_COLOR = [70, 130, 180];
 
 // CTC decoding collapses runs of the same token and drops blanks, so each
 // new run of a non-blank token adds one letter to the decoded word. Blank

@@ -17,6 +17,14 @@ export default function Demo({ backendAwake = false }) {
 	const [preprocessed, setPreprocessed] = useState();
 	const [loading, setLoading] = useState(false);
 	const [hovered, setHovered] = useState();
+	// Where the mouse and keyboard focus are, each true while inside a card's
+	// CTC or prediction. The full detail shows while either is.
+	const [inside, setInside] = useState({ mouse: false, focus: false });
+	const detailed = inside.mouse || inside.focus;
+	const onInside = (kind, isInside) => {
+		setInside((previous) => ({ ...previous, [kind]: isInside }));
+		if (!isInside) setHovered(undefined);
+	};
 
 	const load = (event) => {
 		if (event) event.preventDefault();
@@ -100,6 +108,8 @@ export default function Demo({ backendAwake = false }) {
 							preprocessed={preprocessed}
 							hovered={hovered}
 							onHover={setHovered}
+							detailed={detailed}
+							onInside={onInside}
 						/>
 					))}
 				</div>

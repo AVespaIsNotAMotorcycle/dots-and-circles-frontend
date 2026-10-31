@@ -5,6 +5,7 @@ import axios from 'axios';
 import ScoreCard from './ScoreCard';
 import {
   tokenToLetterIndex, letterColor, abkaiLetter, abkaiLetters, diffLetters,
+  QUIET_COLOR, BLANK_COLOR,
 } from './ctc';
 import styles from './predictioncard.module.css';
 const BACKEND = process.env.NEXT_PUBLIC_BACKEND
@@ -32,9 +33,10 @@ function HoveredDetail({ hovered, ctc, probs }) {
 	}
 }
 
-// One letter of a predicted word: tinted with its tokens' color, and marked
-// if it's wrong, extra or missing compared to the true word
-function PredictedLetter({ entry, text, highlightedIndex }) {
+// One letter of a predicted word: tinted with its tokens' color in the
+// detailed view, and marked if it's wrong, extra or missing compared to the
+// true word
+function PredictedLetter({ entry, text, highlightedIndex, detailed }) {
   const { index, status } = entry;
   const classNames = [styles[status]];
   if (index >= 0 && index === highlightedIndex) {
@@ -43,7 +45,7 @@ function PredictedLetter({ entry, text, highlightedIndex }) {
   return (
 	<span
 	  className={classNames.join(' ')}
-	  style={index >= 0 ? {
+	  style={detailed && index >= 0 ? {
 		backgroundColor: `rgba(${letterColor(index).join(', ')}, .35)`,
 	  } : undefined}>
 	  {text}
@@ -51,7 +53,7 @@ function PredictedLetter({ entry, text, highlightedIndex }) {
   );
 }
 
-function ManchuPrediction({ letters, highlightedIndex }) {
+function ManchuPrediction({ letters, highlightedIndex, detailed }) {
   return (
 	<p className={styles.manchu}>
 	  {letters.map((entry, key) => (
@@ -60,12 +62,15 @@ function ManchuPrediction({ letters, highlightedIndex }) {
 		  entry={entry}
 		  text={entry.letter}
 		  highlightedIndex={highlightedIndex}
+		  detailed={detailed}
 		/>
 	  ))}
 	</p>
   );
 }
-function AbkaiPrediction({ abkai, manchu, letters, highlightedIndex }) {
+function AbkaiPrediction({
+  abkai, manchu, letters, highlightedIndex, detailed,
+}) {
   // Spell each Manchu letter separately, so a highlight covers the whole
   // spelling of a letter (both n and g for ᠩ). If the table disagrees with
   // the server's spelling, show the server's as plain text.
@@ -80,6 +85,7 @@ function AbkaiPrediction({ abkai, manchu, letters, highlightedIndex }) {
 		  entry={entry}
 		  text={abkaiLetter(entry.letter)}
 		  highlightedIndex={highlightedIndex}
+		  detailed={detailed}
 		/>
 	  ))}
 	</p>
@@ -88,7 +94,9 @@ function AbkaiPrediction({ abkai, manchu, letters, highlightedIndex }) {
 
 // One column of the CTC collapse, with a cell lined up with each image token.
 // cellText(index) gives the cell's letter, '·' for a blank, or '' for none.
-function CollapseColumn({ label, ctc, cellText, hovered, onHover }) {
+function CollapseColumn({
+  label, ctc, cellText, hovered, onHover, detailed,
+}) {
   return (
 	<div className={styles.collapseColumn}>
 	  <span className={styles.collapseLabel}>{label}</span>
@@ -101,7 +109,7 @@ function CollapseColumn({ label, ctc, cellText, hovered, onHover }) {
 			key={index}
 			className={hovered === index ? styles.collapseCellHovered
 			  : styles.collapseCell}
-			style={isLetter ? {
+			style={detailed && isLetter ? {
 			  backgroundColor: `rgba(${color.join(', ')}, .35)`,
 			} : undefined}
 			onMouseOver={() => { onHover(index); }}
@@ -129,6 +137,11 @@ export default function PredictionCard({
   // up in all models at once
   hovered = undefined,
   onHover = (index) => {},
+  // Letter colors show only in the detailed view; otherwise all letter
+  // tokens share one color. onInside reports the mouse or keyboard focus
+  // entering or leaving the card's CTC and prediction.
+  detailed = true,
+  onInside = (kind, inside) => {},
 }) {
   const scoreColorBrackets = [
     [1, 'green'],
@@ -143,7 +156,11 @@ export default function PredictionCard({
     return false;
   })[1];
 
-  const indexToColor = (index) => letterColor(tokenToLetterIndex(ctc, index));
+  const indexToColor = (index) => {
+	if (!ctc[index]) return BLANK_COLOR;
+	if (!detailed) return QUIET_COLOR;
+	return letterColor(tokenToLetterIndex(ctc, index));
+  };
   // Opacity from confidence. A floor keeps low-confidence tokens visible,
   // since those are the most interesting ones.
   const scaleProb = (index) => 0.15 + 0.85 * probs[index];
@@ -179,7 +196,13 @@ export default function PredictionCard({
         </summary>
         <p className="model">{model}</p>
       </details>
-      <div className={styles.cardBody}>
+      <div
+		className={styles.cardBody}
+		onMouseEnter={() => { onInside('mouse', true); }}
+		onMouseLeave={() => { onInside('mouse', false); }}
+		onFocus={() => { onInside('focus', true); }}
+		onBlur={() => { onInside('focus', false); }}
+	  >
         <div className={styles.ctc}>
 		  <figure>
 			<figcaption>
@@ -217,11 +240,11 @@ export default function PredictionCard({
 			</div>
 			</div>
 			<CollapseColumn label="tokens" ctc={ctc} cellText={rawCell}
-			  hovered={hovered} onHover={onHover} />
+			  hovered={hovered} onHover={onHover} detailed={detailed} />
 			<CollapseColumn label="merged" ctc={ctc} cellText={mergedCell}
-			  hovered={hovered} onHover={onHover} />
+			  hovered={hovered} onHover={onHover} detailed={detailed} />
 			<CollapseColumn label="word" ctc={ctc} cellText={wordCell}
-			  hovered={hovered} onHover={onHover} />
+			  hovered={hovered} onHover={onHover} detailed={detailed} />
 		  </div>
 			<HoveredDetail hovered={hovered} ctc={ctc} probs={probs} />
 		  </figure>
@@ -231,12 +254,14 @@ export default function PredictionCard({
 		  <ManchuPrediction
 		    letters={letters}
 			highlightedIndex={tokenToLetterIndex(ctc, hovered)}
+			detailed={detailed}
 		  />
 		  <AbkaiPrediction
 		    abkai={abkai}
 		    manchu={manchu}
 		    letters={letters}
 			highlightedIndex={tokenToLetterIndex(ctc, hovered)}
+			detailed={detailed}
 		  />
           <ScoreCard score={score} />
         </div>
