@@ -4,7 +4,7 @@ import axios from 'axios';
 import { useState, useEffect } from 'react';
 
 import ScoreCard from './ScoreCard';
-import { tokenToLetterIndex, letterColor } from './ctc';
+import { tokenToLetterIndex, letterColor, abkaiLetters } from './ctc';
 import styles from './predictioncard.module.css';
 const BACKEND = process.env.NEXT_PUBLIC_BACKEND
 
@@ -48,14 +48,22 @@ function ManchuPrediction({ manchu, highlightedIndex }) {
 	</p>
   );
 }
-function AbkaiPrediction({ abkai, highlightedIndex }) {
+function AbkaiPrediction({ abkai, manchu, highlightedIndex }) {
+  // Spell each Manchu letter separately, so a highlight covers the whole
+  // spelling of a letter (both n and g for ᠩ). If the table disagrees with
+  // the server's spelling, show the server's as plain text.
+  const letters = abkaiLetters(manchu);
+  if (letters.join('') !== abkai) return <p className={styles.abkai}>{abkai}</p>;
   return (
 	<p className={styles.abkai}>
-	  {abkai.split('').map((letter, index) => (
+	  {letters.map((letter, index) => letter && (
 		<span
 		  key={index}
 		  className={index == highlightedIndex ?
-			styles.highlightedLetter : undefined}>
+			styles.highlightedLetter : undefined}
+		  style={{
+			backgroundColor: `rgba(${letterColor(index).join(', ')}, .35)`,
+		  }}>
 		  {letter}
 		</span>
 	  ))}
@@ -145,6 +153,7 @@ export default function PredictionCard({
 		  />
 		  <AbkaiPrediction
 		    abkai={abkai}
+		    manchu={manchu}
 			highlightedIndex={tokenToLetterIndex(ctc, hovered)}
 		  />
           <ScoreCard score={score} />

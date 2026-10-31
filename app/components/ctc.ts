@@ -30,3 +30,22 @@ export function letterColor(letterIndex) {
 	if (letterIndex < 0) return BLANK_COLOR;
 	return LETTER_COLORS[letterIndex % LETTER_COLORS.length];
 }
+
+// Abkai for each character the models can output, copied from the backend's
+// ocr/photos.py. Variation selectors and the other invisible marks have no
+// Abkai spelling.
+const MANCHU_TO_ABKAI = {
+	"ᠠ": "a", "ᡝ": "e", "ᡳ": "i", "ᠢ": "i", "ᠣ": "o", "ᡠ": "u", "ᠤ": "u",
+	"ᡡ": "v", "ᠨ": "n", "ᠩ": "ng", "ᠪ": "b", "ᡦ": "p", "ᡤ": "g", "ᠭ": "g",
+	"ᡥ": "h", "ᡴ": "k", "ᠺ": "k'", "ᡬ": "g'", "ᡭ": "h'", "ᠮ": "m", "ᠯ": "l",
+	"ᠰ": "s", "ᡧ": "x", "ᡨ": "t", "ᡩ": "d", "ᠳ": "d", "ᠴ": "c", "ᠵ": "j",
+	"ᠶ": "y", "ᠸ": "w", "ᡵ": "r", "ᡶ": "f", "ᡮ": "ts'", "ᡯ": "dz",
+	"ᡰ": "r'", "ᡱ": "c'", "ᡷ": "z", "ᡟ": "y", " ": " ",
+	"᠋": "", "᠌": "", "᠍": "", "᠏": "", "᠇": "",
+	"᠊": "",
+};
+
+// The Abkai spelling of each letter in a Manchu word, e.g. ᠠᠩᡤᠠ -> a, ng, g, a
+export function abkaiLetters(manchu) {
+	return manchu.split('').map((letter) => MANCHU_TO_ABKAI[letter] ?? '?');
+}
