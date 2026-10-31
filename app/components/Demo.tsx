@@ -12,6 +12,7 @@ const BACKEND = process.env.NEXT_PUBLIC_BACKEND
 export default function Demo({ backendAwake = false }) {
 	const [lexigraph, setLexigraph] = useState();
 	const [label, setLabel] = useState();
+	const [labelManchu, setLabelManchu] = useState();
 	const [results, setResults] = useState([]);
 	const [preprocessed, setPreprocessed] = useState();
 	const [loading, setLoading] = useState(false);
@@ -24,6 +25,7 @@ export default function Demo({ backendAwake = false }) {
 			.then(({ data }) => {
 				setLexigraph(data.image);
 				setLabel(data.label);
+				setLabelManchu(data.manchu);
 				setResults(data.results);
 				setPreprocessed(data['preprocessed-image']);
 				setHovered(undefined);
@@ -78,7 +80,10 @@ export default function Demo({ backendAwake = false }) {
 				  <h4>CTC output legend: </h4>
 				  <span>Colored bands are letters, </span>
 				  <span>grey bands are blanks, </span>
-				  <span>darker color means more confident.</span>
+				  <span>darker color means more confident. </span>
+				  <span>In predictions, red letters are wrong, </span>
+				  <span>letters with a wavy line are extra, </span>
+				  <span>faint letters are missing.</span>
 				</section>
 				<div className={styles.predictionCards}>
 					{results.map((result) => (
@@ -88,6 +93,7 @@ export default function Demo({ backendAwake = false }) {
 							model={result.model}
 							abkai={result['prediction-abkai']}
 							manchu={result['prediction-manchu']}
+							truth={labelManchu}
 							ctc={result.ctc}
 							probs={result.probs}
 							score={result.score}

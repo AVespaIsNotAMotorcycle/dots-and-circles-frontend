@@ -4,7 +4,7 @@ import axios from 'axios';
 
 import ScoreCard from './ScoreCard';
 import {
-  tokenToLetterIndex, letterColor, abkaiLetter, abkaiLetters,
+  tokenToLetterIndex, letterColor, abkaiLetter, abkaiLetters, diffLetters,
 } from './ctc';
 import styles from './predictioncard.module.css';
 const BACKEND = process.env.NEXT_PUBLIC_BACKEND
@@ -32,41 +32,55 @@ function HoveredDetail({ hovered, ctc, probs }) {
 	}
 }
 
-function ManchuPrediction({ manchu, highlightedIndex }) {
+// One letter of a predicted word: tinted with its tokens' color, and marked
+// if it's wrong, extra or missing compared to the true word
+function PredictedLetter({ entry, text, highlightedIndex }) {
+  const { index, status } = entry;
+  const classNames = [styles[status]];
+  if (index >= 0 && index === highlightedIndex) {
+	classNames.push(styles.highlightedLetter);
+  }
+  return (
+	<span
+	  className={classNames.join(' ')}
+	  style={index >= 0 ? {
+		backgroundColor: `rgba(${letterColor(index).join(', ')}, .35)`,
+	  } : undefined}>
+	  {text}
+	</span>
+  );
+}
+
+function ManchuPrediction({ letters, highlightedIndex }) {
   return (
 	<p className={styles.manchu}>
-	  {manchu.split('').map((letter, index) => (
-		<span
-		  key={index}
-		  className={index == highlightedIndex ?
-			styles.highlightedLetter : undefined}
-		  style={{
-			backgroundColor: `rgba(${letterColor(index).join(', ')}, .35)`,
-		  }}>
-		  {letter}
-		</span>
+	  {letters.map((entry, key) => (
+		<PredictedLetter
+		  key={key}
+		  entry={entry}
+		  text={entry.letter}
+		  highlightedIndex={highlightedIndex}
+		/>
 	  ))}
 	</p>
   );
 }
-function AbkaiPrediction({ abkai, manchu, highlightedIndex }) {
+function AbkaiPrediction({ abkai, manchu, letters, highlightedIndex }) {
   // Spell each Manchu letter separately, so a highlight covers the whole
   // spelling of a letter (both n and g for ᠩ). If the table disagrees with
   // the server's spelling, show the server's as plain text.
-  const letters = abkaiLetters(manchu);
-  if (letters.join('') !== abkai) return <p className={styles.abkai}>{abkai}</p>;
+  if (abkaiLetters(manchu).join('') !== abkai) {
+	return <p className={styles.abkai}>{abkai}</p>;
+  }
   return (
 	<p className={styles.abkai}>
-	  {letters.map((letter, index) => letter && (
-		<span
-		  key={index}
-		  className={index == highlightedIndex ?
-			styles.highlightedLetter : undefined}
-		  style={{
-			backgroundColor: `rgba(${letterColor(index).join(', ')}, .35)`,
-		  }}>
-		  {letter}
-		</span>
+	  {letters.map((entry, key) => abkaiLetter(entry.letter) && (
+		<PredictedLetter
+		  key={key}
+		  entry={entry}
+		  text={abkaiLetter(entry.letter)}
+		  highlightedIndex={highlightedIndex}
+		/>
 	  ))}
 	</p>
   );
@@ -106,6 +120,7 @@ export default function PredictionCard({
   model = "MODEL DETAILS MISSING",
   abkai = "ABKAI MISSING",
   manchu = "MANCHU MISSING",
+  truth = undefined,
   ctc = [],
   probs = [],
   score = 0,
@@ -134,6 +149,10 @@ export default function PredictionCard({
   const scaleProb = (index) => 0.15 + 0.85 * probs[index];
   const tokenColor = (index) => (
 	`rgba(${[...indexToColor(index), scaleProb(index)].join(', ')})`);
+  // The predicted letters, compared to the true word when there is one
+  const letters = truth ? diffLetters(manchu, truth)
+	: manchu.split('').map((letter, index) => ({ letter, index, status: 'ok' }));
+
   // The three steps of CTC decoding, one cell per token
   const startsRun = (index) => index === 0 || ctc[index] !== ctc[index - 1];
   // Cells are spelled in Abkai, since Manchu letters are unreadable at one
@@ -210,12 +229,13 @@ export default function PredictionCard({
         <div className={styles.results}>
 		  <span className={styles.figCapLabel}>Model Prediction</span>
 		  <ManchuPrediction
-		    manchu={manchu}
+		    letters={letters}
 			highlightedIndex={tokenToLetterIndex(ctc, hovered)}
 		  />
 		  <AbkaiPrediction
 		    abkai={abkai}
 		    manchu={manchu}
+		    letters={letters}
 			highlightedIndex={tokenToLetterIndex(ctc, hovered)}
 		  />
           <ScoreCard score={score} />

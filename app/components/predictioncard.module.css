@@ -132,3 +132,17 @@
 .collapseCellHovered {
 	outline: 2px solid black;
 }
+
+/* Letters compared to the true word */
+.wrong, .extra {
+	color: red;
+}
+.extra {
+	/* A strike-through would hide in the spine of vertical Manchu, so mark
+	   extra letters with a wavy line beside or under them instead */
+	text-decoration: underline wavy red;
+	text-decoration-thickness: 2px;
+}
+.missing {
+	opacity: .3;
+}
