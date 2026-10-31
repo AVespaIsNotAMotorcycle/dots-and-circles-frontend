@@ -72,6 +72,12 @@ export default function Demo({ backendAwake = false }) {
 			</section>
 			<section>
 				<h3>Model Predictions</h3>
+				<section className={styles.ctcLegend}>
+				  <h4>CTC output legend:</h4>
+				  <span>Colored bands are letters, </span>
+				  <span>grey bands are blanks, </span>
+				  <span>darker color means more confident.</span>
+				</section>
 				<div className={styles.predictionCards}>
 					{results.map((result) => (
 						<PredictionCard

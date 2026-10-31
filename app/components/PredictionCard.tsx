@@ -117,6 +117,9 @@ export default function PredictionCard({
       <div className={styles.cardBody}>
         <div className={styles.ctc}>
 		  <figure>
+			<figcaption>
+			  <span className={styles.figCapLabel}>CTC Output</span>
+			</figcaption>
 		    <div className={styles.diagram}>
               <img src={preprocessed} className={styles.preprocessed} />
               <div className={styles.tokens}>
@@ -139,18 +142,11 @@ export default function PredictionCard({
                 })}
               </div>
 			</div>
-			<figcaption>
-			  <span className={styles.figCapLabel}>CTC Output</span>
-			  <ul>
-				<HoveredDetail hovered={hovered} ctc={ctc} probs={probs} />
-			    <li>Colored bands are letters.</li>
-			    <li>Grey bands are blanks.</li>
-				<li>Darker color means more confident.</li>
-			  </ul>
-			</figcaption>
+			<HoveredDetail hovered={hovered} ctc={ctc} probs={probs} />
 		  </figure>
         </div>
         <div className={styles.results}>
+		  <span className={styles.figCapLabel}>Model Prediction</span>
           <p className={styles.manchu}>{manchu}</p>
           <p className={styles.abkai}>{abkai}</p>
           <ScoreCard score={score} />

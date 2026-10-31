@@ -77,12 +77,9 @@
 	opacity: .9;
 }
 
-.ctc figcaption {
-	margin-top: 1rem;
-}
-.ctc figcaption .figCapLabel {
-	margin-top: 2rem;
+.figCapLabel {
 	font-weight: 800;
+	margin-bottom: 1rem;
 }
 .ctc figcaption ul {
 	font-size: .9rem;

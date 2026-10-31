@@ -73,3 +73,11 @@
 	gap: 1rem;
 	flex-wrap: wrap;
 }
+
+.ctcLegend {
+	margin-bottom: 1rem;
+}
+.ctcLegend h4 {
+	font-weight: 800;
+	display: inline;
+}
