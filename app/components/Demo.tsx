@@ -20,10 +20,24 @@ export default function Demo({ backendAwake = false }) {
 	// Where the mouse and keyboard focus are, each true while inside a card's
 	// CTC or prediction. The full detail shows while either is.
 	const [inside, setInside] = useState({ mouse: false, focus: false });
-	const detailed = inside.mouse || inside.focus;
+	// A click pins the detail on, and the clicked token, until the same token
+	// (or the card outside any token) is clicked again
+	const [pinned, setPinned] = useState(false);
+	const detailed = inside.mouse || inside.focus || pinned;
 	const onInside = (kind, isInside) => {
 		setInside((previous) => ({ ...previous, [kind]: isInside }));
-		if (!isInside) setHovered(undefined);
+		if (!isInside && !pinned) setHovered(undefined);
+	};
+	const onHover = (index) => {
+		if (!pinned) setHovered(index);
+	};
+	const onSelect = (index) => {
+		if (pinned && (index === undefined || index === hovered)) {
+			setPinned(false);
+			return;
+		}
+		setPinned(true);
+		if (index !== undefined) setHovered(index);
 	};
 
 	const load = (event) => {
@@ -37,6 +51,7 @@ export default function Demo({ backendAwake = false }) {
 				setResults(data.results);
 				setPreprocessed(data['preprocessed-image']);
 				setHovered(undefined);
+				setPinned(false);
 				setLoading(false);
 			});
 	};
@@ -107,7 +122,9 @@ export default function Demo({ backendAwake = false }) {
 							score={result.score}
 							preprocessed={preprocessed}
 							hovered={hovered}
-							onHover={setHovered}
+							onHover={onHover}
+							onSelect={onSelect}
+							onMove={setHovered}
 							detailed={detailed}
 							onInside={onInside}
 						/>

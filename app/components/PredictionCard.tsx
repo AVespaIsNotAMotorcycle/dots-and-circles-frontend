@@ -95,7 +95,7 @@ function AbkaiPrediction({
 // One column of the CTC collapse, with a cell lined up with each image token.
 // cellText(index) gives the cell's letter, '·' for a blank, or '' for none.
 function CollapseColumn({
-  label, ctc, cellText, hovered, onHover, detailed,
+  label, ctc, cellText, hovered, onHover, onSelect, detailed,
 }) {
   return (
 	<div className={styles.collapseColumn}>
@@ -113,7 +113,10 @@ function CollapseColumn({
 			  backgroundColor: `rgba(${color.join(', ')}, .35)`,
 			} : undefined}
 			onMouseOver={() => { onHover(index); }}
-			onClick={() => { onHover(index); }}
+			onClick={(event) => {
+			  event.stopPropagation();
+			  onSelect(index);
+			}}
 		  >
 			{text}
 		  </span>
@@ -137,6 +140,11 @@ export default function PredictionCard({
   // up in all models at once
   hovered = undefined,
   onHover = (index) => {},
+  // Clicks pin the detail on: onSelect(index) for a token, onSelect() for
+  // anywhere else in the card. onMove sets the token even while pinned, for
+  // the arrow keys.
+  onSelect = (index) => {},
+  onMove = (index) => {},
   // Letter colors show only in the detailed view; otherwise all letter
   // tokens share one color. onInside reports the mouse or keyboard focus
   // entering or leaving the card's CTC and prediction.
@@ -185,7 +193,7 @@ export default function PredictionCard({
 	if (!(event.key in steps)) return;
 	event.preventDefault();
 	const next = (hovered ?? -1) + steps[event.key];
-	onHover(Math.min(Math.max(next, 0), ctc.length - 1));
+	onMove(Math.min(Math.max(next, 0), ctc.length - 1));
   };
 
   return (
@@ -200,8 +208,13 @@ export default function PredictionCard({
 		className={styles.cardBody}
 		onMouseEnter={() => { onInside('mouse', true); }}
 		onMouseLeave={() => { onInside('mouse', false); }}
-		onFocus={() => { onInside('focus', true); }}
+		// Only keyboard focus counts: a click also focuses the token strip, and
+		// shouldn't keep the detail on after the mouse leaves
+		onFocus={(event) => {
+		  if (event.target.matches(':focus-visible')) onInside('focus', true);
+		}}
 		onBlur={() => { onInside('focus', false); }}
+		onClick={() => { onSelect(); }}
 	  >
         <div className={styles.ctc}>
 		  <figure>
@@ -215,7 +228,7 @@ export default function PredictionCard({
 			  className={styles.diagram}
 			  tabIndex={0}
 			  aria-label="CTC tokens: use the up and down arrow keys to step through them"
-			  onFocus={() => { if (hovered === undefined) onHover(0); }}
+			  onFocus={() => { if (hovered === undefined) onMove(0); }}
 			  onKeyDown={onKeyDown}
 			>
               <img src={preprocessed} className={styles.preprocessed} />
@@ -232,7 +245,10 @@ export default function PredictionCard({
 						className={styles[classKey]}
 						style={style}
 						onMouseOver={() => { onHover(index); }}
-						onClick={() => { onHover(index); }}
+						onClick={(event) => {
+						  event.stopPropagation();
+						  onSelect(index);
+						}}
 					  />
 				  );
                 })}
@@ -240,11 +256,14 @@ export default function PredictionCard({
 			</div>
 			</div>
 			<CollapseColumn label="tokens" ctc={ctc} cellText={rawCell}
-			  hovered={hovered} onHover={onHover} detailed={detailed} />
+			  hovered={hovered} onHover={onHover} onSelect={onSelect}
+			  detailed={detailed} />
 			<CollapseColumn label="merged" ctc={ctc} cellText={mergedCell}
-			  hovered={hovered} onHover={onHover} detailed={detailed} />
+			  hovered={hovered} onHover={onHover} onSelect={onSelect}
+			  detailed={detailed} />
 			<CollapseColumn label="word" ctc={ctc} cellText={wordCell}
-			  hovered={hovered} onHover={onHover} detailed={detailed} />
+			  hovered={hovered} onHover={onHover} onSelect={onSelect}
+			  detailed={detailed} />
 		  </div>
 			<HoveredDetail hovered={hovered} ctc={ctc} probs={probs} />
 		  </figure>
