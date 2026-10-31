@@ -23,7 +23,9 @@ export default function Demo({ backendAwake = false }) {
 	// A click pins the detail on, and the clicked token, until the same token
 	// (or the card outside any token) is clicked again
 	const [pinned, setPinned] = useState(false);
-	const detailed = inside.mouse || inside.focus || pinned;
+	// The toggle keeps the full detail on all the time
+	const [alwaysDetailed, setAlwaysDetailed] = useState(false);
+	const detailed = alwaysDetailed || inside.mouse || inside.focus || pinned;
 	const onInside = (kind, isInside) => {
 		setInside((previous) => ({ ...previous, [kind]: isInside }));
 		if (!isInside && !pinned) setHovered(undefined);
@@ -107,6 +109,14 @@ export default function Demo({ backendAwake = false }) {
 				  <span>In predictions, red letters are wrong, </span>
 				  <span>letters with a wavy line are extra, </span>
 				  <span>faint letters are missing.</span>
+				  <label className={styles.detailToggle}>
+					<input
+					  type="checkbox"
+					  checked={alwaysDetailed}
+					  onChange={(event) => { setAlwaysDetailed(event.target.checked); }}
+					/>
+					Always show letter colors
+				  </label>
 				</section>
 				<div className={styles.predictionCards}>
 					{results.map((result) => (

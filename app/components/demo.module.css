@@ -81,3 +81,18 @@
 	font-weight: 800;
 	display: inline;
 }
+
+.detailToggle {
+	display: flex;
+	align-items: center;
+	gap: .5rem;
+	margin-top: .5rem;
+	width: fit-content;
+	cursor: pointer;
+}
+.detailToggle input {
+	/* Undo the global text-input sizing */
+	width: auto;
+	margin: 0;
+	padding: 0;
+}
