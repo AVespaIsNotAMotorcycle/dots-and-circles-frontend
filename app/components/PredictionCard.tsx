@@ -83,13 +83,6 @@ export default function PredictionCard({
     return false;
   })[1];
 
-  const neighboringProbs = (index) => {
-    var pre = probs[index];
-    var post = probs[index];
-    if (index > 0) pre = probs[index - 1];
-    if (index < probs.length) post = probs[index + 1];
-    return [pre, post];
-  };
   const indexToColor = (index) => {
 	const colors = [[25,25,112],
 					[255,69,0],
@@ -112,24 +105,8 @@ export default function PredictionCard({
   // Opacity from confidence. A floor keeps low-confidence tokens visible,
   // since those are the most interesting ones.
   const scaleProb = (index) => 0.15 + 0.85 * probs[index];
-  const blendIndices = (first, second) => {
-	  const firstRGBA = [...indexToColor(first), scaleProb(first)];
-	  const secondRGBA = [...indexToColor(second), scaleProb(second)];
-	  const blend = firstRGBA.map((val, index) => (
-		  (val + secondRGBA[index]) / 2));
-	  return `rgba(${blend.join(', ')})`;
-  };
-  const gradientString = (index) => {
-    const colorIndices = [index - 1, index, index + 1];
-	if (index === 0) colorIndices[0] = index;
-	if (index === probs.length - 1) colorIndices[2] = index;
-	const colorStrings = [
-		blendIndices(colorIndices[0], colorIndices[1]),
-		blendIndices(colorIndices[1], colorIndices[1]),
-		blendIndices(colorIndices[1], colorIndices[2]),
-	];
-    return `linear-gradient(to bottom, ${colorStrings.join(', ')})`;
-  };
+  const tokenColor = (index) => (
+	`rgba(${[...indexToColor(index), scaleProb(index)].join(', ')})`);
   const tokenToLetterIndex = (tokenIndex) => {
     // CTC decoding collapses runs of the same token and drops blanks, so each
     // new run of a non-blank token adds one letter to `manchu`. Blank tokens
@@ -167,12 +144,10 @@ export default function PredictionCard({
               <img src={preprocessed} className={styles.preprocessed} />
               <div className={styles.tokens}>
                 {ctc.map((letter, index) => {
-                  const prob = probs[index];
-                  const [pre, post] = neighboringProbs(index);
                   const classKey = hovered === index ? 'tokenProbHovered'
 					  : 'tokenProb';
                   const style = {
-                    backgroundImage: gradientString(index),
+                    backgroundColor: tokenColor(index),
                   };
                   return (
 					  <div
