@@ -97,5 +97,5 @@
 }
 
 .highlightedLetter {
-	background-color: lightgreen;
+	outline: 2px solid black;
 }
