@@ -109,7 +109,9 @@ export default function PredictionCard({
 	if (indexInWord >= colors.length) indexInWord = 0;
 	return colors[indexInWord];
   };
-  const scaleProb = (index) => (probs[index] - .5) * 2;
+  // Opacity from confidence. A floor keeps low-confidence tokens visible,
+  // since those are the most interesting ones.
+  const scaleProb = (index) => 0.15 + 0.85 * probs[index];
   const blendIndices = (first, second) => {
 	  const firstRGBA = [...indexToColor(first), scaleProb(first)];
 	  const secondRGBA = [...indexToColor(second), scaleProb(second)];
