@@ -91,3 +91,7 @@
 	display: flex;
 	justify-content: space-between;
 }
+
+.ctc {
+	max-width: min-content;
+}
