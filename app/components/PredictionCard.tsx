@@ -1,7 +1,6 @@
 'use client'
 
 import axios from 'axios';
-import { useState, useEffect } from 'react';
 
 import ScoreCard from './ScoreCard';
 import {
@@ -110,8 +109,11 @@ export default function PredictionCard({
   probs = [],
   score = 0,
   preprocessed = null,
+  // The hovered token is shared by every card, so the same image row lights
+  // up in all models at once
+  hovered = undefined,
+  onHover = (index) => {},
 }) {
-  const [hovered, setHovered] = useState();
   const scoreColorBrackets = [
     [1, 'green'],
     [0.9, 'yellow'],
@@ -140,13 +142,6 @@ export default function PredictionCard({
   const mergedCell = (index) => (startsRun(index) ? rawCell(index) : '');
   const wordCell = (index) => (startsRun(index) && ctc[index]
 	? rawCell(index) : '');
-  const onMouseOver = (index) => {
-	  setHovered(index);
-  };
-  useEffect(() => {
-	  setHovered(undefined);
-  }, [preprocessed])
-
   return (
     <section className={styles.card}>
       <details>
@@ -178,7 +173,7 @@ export default function PredictionCard({
 						key={index}
 						className={styles[classKey]}
 						style={style}
-						onMouseOver={() => { onMouseOver(index); }}
+						onMouseOver={() => { onHover(index); }}
 					  />
 				  );
                 })}
@@ -186,11 +181,11 @@ export default function PredictionCard({
 			</div>
 			</div>
 			<CollapseColumn label="tokens" ctc={ctc} cellText={rawCell}
-			  hovered={hovered} onHover={onMouseOver} />
+			  hovered={hovered} onHover={onHover} />
 			<CollapseColumn label="merged" ctc={ctc} cellText={mergedCell}
-			  hovered={hovered} onHover={onMouseOver} />
+			  hovered={hovered} onHover={onHover} />
 			<CollapseColumn label="word" ctc={ctc} cellText={wordCell}
-			  hovered={hovered} onHover={onMouseOver} />
+			  hovered={hovered} onHover={onHover} />
 		  </div>
 			<HoveredDetail hovered={hovered} ctc={ctc} probs={probs} />
 		  </figure>

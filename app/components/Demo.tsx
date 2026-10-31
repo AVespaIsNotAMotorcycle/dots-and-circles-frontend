@@ -15,6 +15,7 @@ export default function Demo({ backendAwake = false }) {
 	const [results, setResults] = useState([]);
 	const [preprocessed, setPreprocessed] = useState();
 	const [loading, setLoading] = useState(false);
+	const [hovered, setHovered] = useState();
 
 	const load = (event) => {
 		if (event) event.preventDefault();
@@ -25,6 +26,7 @@ export default function Demo({ backendAwake = false }) {
 				setLabel(data.label);
 				setResults(data.results);
 				setPreprocessed(data['preprocessed-image']);
+				setHovered(undefined);
 				setLoading(false);
 			});
 	};
@@ -90,6 +92,8 @@ export default function Demo({ backendAwake = false }) {
 							probs={result.probs}
 							score={result.score}
 							preprocessed={preprocessed}
+							hovered={hovered}
+							onHover={setHovered}
 						/>
 					))}
 				</div>
