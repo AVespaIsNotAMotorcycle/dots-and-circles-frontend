@@ -1,9 +1,10 @@
 'use client'
 
 import axios from 'axios';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 
 import styles from './demo.module.css';
+import LoadingCard from './LoadingCard';
 import PredictionCard from './PredictionCard';
 
 const BACKEND = process.env.NEXT_PUBLIC_BACKEND
@@ -13,17 +14,25 @@ export default function Demo({ backendAwake = false }) {
 	const [label, setLabel] = useState();
 	const [results, setResults] = useState([]);
 	const [preprocessed, setPreprocessed] = useState();
+	const [loading, setLoading] = useState(false);
 
 	const load = (event) => {
-		event.preventDefault();
+		if (event) event.preventDefault();
+		setLoading(true);
 		axios.get(`${BACKEND}/random`)
 			.then(({ data }) => {
 				setLexigraph(data.image);
 				setLabel(data.label);
 				setResults(data.results);
 				setPreprocessed(data['preprocessed-image']);
+				setLoading(false);
 			});
 	};
+
+	useEffect(() => {
+		if (!backendAwake) return;
+		load();
+	}, [backendAwake]);
 
 	return (
 		<section className={styles.demo}>
@@ -36,6 +45,10 @@ export default function Demo({ backendAwake = false }) {
 				<button>
 					Load Random Word
 				</button>
+				<LoadingCard
+					loading={loading || !backendAwake}
+					message={backendAwake ? 'loadingPredictions' : 'wakingServer'}
+				/>
 			</form>
 			<section className={styles.lexigraph}>
 				<h3>Lexigraph</h3>
