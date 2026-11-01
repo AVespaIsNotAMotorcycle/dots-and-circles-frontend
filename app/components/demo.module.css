@@ -22,7 +22,50 @@
 .form {
 	display: flex;
 	flex-direction: row;
-	gap: 2rem;
+	flex-wrap: wrap;
+	align-items: flex-end;
+	gap: 1rem 2rem;
+}
+.source {
+	display: flex;
+	flex-direction: column;
+	gap: .25rem;
+}
+
+.or {
+	align-self: center;
+}
+
+.upload {
+	flex-direction: row;
+	flex-wrap: wrap;
+	align-items: flex-end;
+	gap: 1rem;
+}
+.upload label {
+	display: flex;
+	flex-direction: column;
+	gap: .25rem;
+}
+.upload input {
+	/* Undo the global text-input sizing */
+	margin: 0;
+}
+.upload input[type="text"] {
+	width: 12rem;
+}
+.upload input[type="file"] {
+	width: auto;
+	max-width: 100%;
+}
+.form button:disabled {
+	opacity: .5;
+	pointer-events: none;
+}
+
+.error {
+	color: red;
+	flex-basis: 100%;
 }
 
 .lexigraph figure {
@@ -31,6 +74,10 @@
 .lexigraph figcaption {
 	font-size: 2rem;
 	text-align: center;
+}
+.lexigraph .font {
+	text-align: center;
+	color: grey;
 }
 .lexigraph img {
 	width: 128px;

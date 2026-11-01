@@ -1,6 +1,9 @@
 import styles from './scorecard.module.css';
 
 export default function ScoreCard({ score }) {
+  // Unlabelled uploads have nothing to score against
+  if (score === null || score === undefined) return null;
+
   const scoreColorBrackets = [
     [1, 'green'],
     [0.9, 'yellow'],

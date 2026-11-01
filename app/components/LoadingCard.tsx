@@ -3,6 +3,7 @@ import styles from './loadingcard.module.css';
 const MESSAGES = {
   wakingServer: 'Waking up the server...',
   loadingPredictions: 'Loading lexigraph and model predictions...',
+  readingUpload: 'Reading your image...',
 };
 
 export default function LoadingCard({ loading = false, message }) {
