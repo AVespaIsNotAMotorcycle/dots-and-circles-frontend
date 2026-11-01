@@ -56,6 +56,10 @@ export default function Demo({ backendAwake = false }) {
 	// The user's image once it passes checkImage, and its optional label
 	const [upload, setUpload] = useState();
 	const [uploadLabel, setUploadLabel] = useState('');
+	// An object URL of upload, for its thumbnail
+	const [uploadPreview, setUploadPreview] = useState();
+	// True while a file is dragged over the drop zone
+	const [dragging, setDragging] = useState(false);
 	const [hovered, setHovered] = useState();
 	// Where the mouse and keyboard focus are, each true while inside a card's
 	// CTC or prediction. The full detail shows while either is.
@@ -109,9 +113,13 @@ export default function Demo({ backendAwake = false }) {
 			.finally(() => { setLoading(false); });
 	};
 
-	const onPickFile = async (event) => {
-		const file = event.target.files[0];
+	// Takes an image from the file picker, a drop or a paste
+	const takeFile = async (file) => {
 		setUpload(undefined);
+		setUploadPreview((previous) => {
+			if (previous) URL.revokeObjectURL(previous);
+			return undefined;
+		});
 		setError(undefined);
 		if (!file) return;
 		const problem = await checkImage(file);
@@ -120,7 +128,58 @@ export default function Demo({ backendAwake = false }) {
 			return;
 		}
 		setUpload(file);
+		setUploadPreview(URL.createObjectURL(file));
 	};
+	// The first image among a paste's or drop's files, if any
+	const firstImage = (files) => Array.from(files ?? [])
+		.find((file) => file.type.startsWith('image/'));
+
+	const onDrop = (event) => {
+		event.preventDefault();
+		setDragging(false);
+		const file = firstImage(event.dataTransfer.files);
+		if (file) {
+			takeFile(file);
+		} else {
+			setError({ mode: 'upload', message: 'That isn\'t an image.' });
+		}
+	};
+
+	// The Paste button reads the clipboard directly. Browsers that can't
+	// (or that the user denies) can still paste with Ctrl+V.
+	const pasteFromClipboard = async () => {
+		const fallback = 'Couldn\'t read the clipboard here. Press Ctrl+V (⌘V on a Mac) instead.';
+		if (!navigator.clipboard?.read) {
+			setError({ mode: 'upload', message: fallback });
+			return;
+		}
+		try {
+			for (const item of await navigator.clipboard.read()) {
+				const type = item.types.find((t) => t.startsWith('image/'));
+				if (!type) continue;
+				const blob = await item.getType(type);
+				takeFile(new File([blob], 'Pasted image', { type }));
+				return;
+			}
+			setError({ mode: 'upload', message: 'There\'s no image on the clipboard.' });
+		} catch {
+			setError({ mode: 'upload', message: fallback });
+		}
+	};
+
+	// Ctrl+V anywhere on the page pastes an image while uploading. Pastes
+	// without one (like text into the label) are left alone.
+	useEffect(() => {
+		if (mode !== 'upload') return;
+		const onPaste = (event) => {
+			const file = firstImage(event.clipboardData?.files);
+			if (!file) return;
+			event.preventDefault();
+			takeFile(file);
+		};
+		document.addEventListener('paste', onPaste);
+		return () => { document.removeEventListener('paste', onPaste); };
+	}, [mode]);
 
 	const read = (event) => {
 		event.preventDefault();
@@ -184,14 +243,45 @@ export default function Demo({ backendAwake = false }) {
 					hidden={mode !== 'upload'}
 					onSubmit={read}
 				>
-					<label>
-						Your image of one word, written top to bottom
-						<input
-							type="file"
-							accept="image/*"
-							onChange={onPickFile}
-						/>
-					</label>
+					<div
+						className={[styles.dropZone, dragging && styles.dragging]
+							.filter(Boolean).join(' ')}
+						onDragOver={(event) => {
+							event.preventDefault();
+							setDragging(true);
+						}}
+						onDragLeave={() => { setDragging(false); }}
+						onDrop={onDrop}
+					>
+						<span className={styles.dropZoneTitle}>
+							Your image of one word, written top to bottom
+						</span>
+						<div className={styles.chosen}>
+							{uploadPreview && <img src={uploadPreview} alt="" />}
+							<span>{upload ? upload.name : 'No image chosen'}</span>
+						</div>
+						<div className={styles.dropZoneActions}>
+							<label className={styles.chooseButton}>
+								Choose image…
+								<input
+									type="file"
+									accept="image/*"
+									className={styles.visuallyHidden}
+									onChange={(event) => {
+										takeFile(event.target.files[0]);
+										// So picking the same file again still counts
+										event.target.value = '';
+									}}
+								/>
+							</label>
+							<button type="button" onClick={pasteFromClipboard}>
+								Paste image
+							</button>
+						</div>
+						<span className={styles.hint}>
+							or drag one here, or press Ctrl+V (⌘V on a Mac)
+						</span>
+					</div>
 					<label>
 						What it says, in Abkai (optional)
 						<input
