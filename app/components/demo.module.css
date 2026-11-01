@@ -3,7 +3,9 @@
 	grid-template-columns: 1fr;
 }
 
-@media (min-width: 600px) {
+/* Two columns once a prediction card (about 345px at its narrowest) fits
+   beside the 250px lexigraph */
+@media (min-width: 680px) {
 	.demo {
 		display: grid;
 		grid-template-columns: 250px 1fr;
@@ -40,7 +42,7 @@
 }
 /* With the predictions below rather than beside it, the lexigraph has room
    for the result summary on its right */
-@media (max-width: 599.98px) {
+@media (max-width: 679.98px) {
 	.lexigraph {
 		display: flex;
 		flex-wrap: wrap;

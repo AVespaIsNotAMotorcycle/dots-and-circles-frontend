@@ -118,6 +118,12 @@ main {
 	margin: 2rem 1rem;
 	padding: 0 1rem;
 }
+/* Narrower gutters on phones, to leave room for the prediction cards */
+@media (max-width: 479.98px) {
+	main {
+		margin: 1rem 0;
+	}
+}
 
 @font-face { font-family: manchu0; src: url('/XM_BiaoHei.ttf'); }
 @font-face { font-family: manchu1; src: url('/XM_GuFeng.ttf'); }

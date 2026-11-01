@@ -34,9 +34,17 @@
 
 .cardBody {
 	display: grid;
-	grid-template-columns: 1fr 1fr;
+	/* The CTC diagram takes what it needs, so the narrower prediction side
+	   doesn't force the card wider */
+	grid-template-columns: auto 1fr;
 	flex-grow: 1;
-	gap: 2rem;
+	gap: 1rem;
+}
+/* Too narrow for the two side by side: the prediction goes below */
+@media (max-width: 379.98px) {
+	.cardBody {
+		grid-template-columns: 1fr;
+	}
 }
 
 .results {
