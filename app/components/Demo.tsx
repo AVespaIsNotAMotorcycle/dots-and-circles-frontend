@@ -49,6 +49,9 @@ export default function Demo({ backendAwake = false }) {
 	const [source, setSource] = useState('photo');
 	// false, or the LoadingCard message to show
 	const [loading, setLoading] = useState(false);
+	// Which options the form shows: 'random' or 'upload'
+	const [mode, setMode] = useState('random');
+	// { mode, message }: shown only under the mode it came from
 	const [error, setError] = useState();
 	// The user's image once it passes checkImage, and its optional label
 	const [upload, setUpload] = useState();
@@ -90,8 +93,11 @@ export default function Demo({ backendAwake = false }) {
 		setPinned(false);
 	};
 	// The server's {"error": ...} message, or a fallback
-	const showError = (error, fallback) => {
-		setError(error.response?.data?.error ?? fallback);
+	const showError = (errorMode, error, fallback) => {
+		setError({
+			mode: errorMode,
+			message: error.response?.data?.error ?? fallback,
+		});
 	};
 
 	const load = () => {
@@ -99,7 +105,7 @@ export default function Demo({ backendAwake = false }) {
 		setError(undefined);
 		axios.get(`${BACKEND}/random`, { params: { source } })
 			.then(({ data }) => { show(data); })
-			.catch((error) => { showError(error, 'Couldn\'t load a word.'); })
+			.catch((error) => { showError('random', error, 'Couldn\'t load a word.'); })
 			.finally(() => { setLoading(false); });
 	};
 
@@ -110,7 +116,7 @@ export default function Demo({ backendAwake = false }) {
 		if (!file) return;
 		const problem = await checkImage(file);
 		if (problem) {
-			setError(problem);
+			setError({ mode: 'upload', message: problem });
 			return;
 		}
 		setUpload(file);
@@ -126,7 +132,7 @@ export default function Demo({ backendAwake = false }) {
 		setError(undefined);
 		axios.post(`${BACKEND}/upload/single`, body)
 			.then(({ data }) => { show(data); })
-			.catch((error) => { showError(error, 'Couldn\'t read the image.'); })
+			.catch((error) => { showError('upload', error, 'Couldn\'t read the image.'); })
 			.finally(() => { setLoading(false); });
 	};
 
@@ -139,25 +145,45 @@ export default function Demo({ backendAwake = false }) {
 		<section className={styles.demo}>
 			<h2>Demo</h2>
 			<div className={styles.form}>
-				<label className={styles.source}>
-					Random words from
-					<select
-						value={source}
-						onChange={(event) => { setSource(event.target.value); }}
+				<div className={styles.modes} role="group" aria-label="Word to read">
+					{[['random', 'Random word'], ['upload', 'Your image']].map(
+						([value, text]) => (
+							<button
+								key={value}
+								type="button"
+								aria-pressed={mode === value}
+								className={mode === value ? styles.selectedMode : undefined}
+								onClick={() => { setMode(value); }}
+							>
+								{text}
+							</button>
+						))}
+				</div>
+				{/* Hidden rather than removed, so a picked file survives a switch */}
+				<div className={styles.options} hidden={mode !== 'random'}>
+					<label>
+						Random words from
+						<select
+							value={source}
+							onChange={(event) => { setSource(event.target.value); }}
+						>
+							<option value="photo">Real photos</option>
+							<option value="synthetic">Synthetic renders</option>
+						</select>
+					</label>
+					<button
+						type="button"
+						disabled={!backendAwake || Boolean(loading)}
+						onClick={load}
 					>
-						<option value="photo">Real photos</option>
-						<option value="synthetic">Synthetic renders</option>
-					</select>
-				</label>
-				<button
-					type="button"
-					disabled={!backendAwake || Boolean(loading)}
-					onClick={load}
+						Load Random Word
+					</button>
+				</div>
+				<form
+					className={styles.options}
+					hidden={mode !== 'upload'}
+					onSubmit={read}
 				>
-					Load Random Word
-				</button>
-				<span className={styles.or}>or</span>
-				<form className={styles.upload} onSubmit={read}>
 					<label>
 						Your image of one word, written top to bottom
 						<input
@@ -186,7 +212,9 @@ export default function Demo({ backendAwake = false }) {
 					loading={Boolean(loading) || !backendAwake}
 					message={backendAwake ? loading : 'wakingServer'}
 				/>
-				{error && <p className={styles.error} role="alert">{error}</p>}
+				{error?.mode === mode && (
+					<p className={styles.error} role="alert">{error.message}</p>
+				)}
 			</div>
 			<section className={styles.lexigraph}>
 				<h3>Lexigraph</h3>

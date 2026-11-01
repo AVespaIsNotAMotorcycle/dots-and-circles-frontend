@@ -21,40 +21,54 @@
 
 .form {
 	display: flex;
-	flex-direction: row;
-	flex-wrap: wrap;
-	align-items: flex-end;
-	gap: 1rem 2rem;
-}
-.source {
-	display: flex;
 	flex-direction: column;
-	gap: .25rem;
+	align-items: flex-start;
+	gap: 1rem;
 }
 
-.or {
-	align-self: center;
+/* Two buttons joined into one switch */
+.modes {
+	display: flex;
+}
+.modes button {
+	border-radius: 0;
+}
+.modes button:first-child {
+	border-radius: 5px 0 0 5px;
+}
+.modes button:last-child {
+	border-radius: 0 5px 5px 0;
+	border-left-width: 0;
+}
+.modes button.selectedMode {
+	background-color: var(--color-foreground);
+	color: var(--color-background);
 }
 
-.upload {
+.options {
+	display: flex;
 	flex-direction: row;
 	flex-wrap: wrap;
 	align-items: flex-end;
 	gap: 1rem;
 }
-.upload label {
+/* display: flex would otherwise override the hidden attribute */
+.options[hidden] {
+	display: none;
+}
+.options label {
 	display: flex;
 	flex-direction: column;
 	gap: .25rem;
 }
-.upload input {
+.options input {
 	/* Undo the global text-input sizing */
 	margin: 0;
 }
-.upload input[type="text"] {
+.options input[type="text"] {
 	width: 12rem;
 }
-.upload input[type="file"] {
+.options input[type="file"] {
 	width: auto;
 	max-width: 100%;
 }
@@ -65,7 +79,6 @@
 
 .error {
 	color: red;
-	flex-basis: 100%;
 }
 
 .lexigraph figure {
