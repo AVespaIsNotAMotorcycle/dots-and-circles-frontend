@@ -1,1 +1,1 @@
-Dots and Circles: see how neural networks built from scratch read Manchu words. Beside the title, tongki fuka sindaha hergen ("script with dots and circles") written in Manchu script.
+Dots and Circles: Manchu OCR from scratch. Beside the title, tongki fuka sindaha hergen ("script with dots and circles") written in Manchu script.
