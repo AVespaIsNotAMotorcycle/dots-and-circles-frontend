@@ -24,37 +24,39 @@ export default function Demo({ backendAwake = false }) {
 	const [error, setError] = useState();
 	const highlight = useTokenHighlight();
 
-	const show = (data) => {
-		setWord(data);
-		highlight.reset();
-	};
-	// The server's {"error": ...} message, or a fallback
-	const showError = (errorMode, error, fallback) => {
-		setError({
-			mode: errorMode,
-			message: error.response?.data?.error ?? fallback,
-		});
+	// Runs a backend request for a new word: shows loadingMessage meanwhile,
+	// then the word, or the server's {"error": ...} (or fallback) under
+	// errorMode's form
+	const request = (errorMode, loadingMessage, send, fallback) => {
+		setLoading(loadingMessage);
+		setError(undefined);
+		send()
+			.then(({ data }) => {
+				setWord(data);
+				highlight.reset();
+			})
+			.catch((error) => {
+				setError({
+					mode: errorMode,
+					message: error.response?.data?.error ?? fallback,
+				});
+			})
+			.finally(() => { setLoading(false); });
 	};
 
 	const load = (source = 'photo') => {
-		setLoading('loadingPredictions');
-		setError(undefined);
-		axios.get(`${BACKEND}/random`, { params: { source } })
-			.then(({ data }) => { show(data); })
-			.catch((error) => { showError('random', error, 'Couldn\'t load a word.'); })
-			.finally(() => { setLoading(false); });
+		request('random', 'loadingPredictions',
+			() => axios.get(`${BACKEND}/random`, { params: { source } }),
+			'Couldn\'t load a word.');
 	};
 
 	const read = (file, label) => {
 		const body = new FormData();
 		body.append('image', file);
 		if (label) body.append('label', label);
-		setLoading('readingUpload');
-		setError(undefined);
-		axios.post(`${BACKEND}/upload/single`, body)
-			.then(({ data }) => { show(data); })
-			.catch((error) => { showError('upload', error, 'Couldn\'t read the image.'); })
-			.finally(() => { setLoading(false); });
+		request('upload', 'readingUpload',
+			() => axios.post(`${BACKEND}/upload/single`, body),
+			'Couldn\'t read the image.');
 	};
 
 	useEffect(() => {
