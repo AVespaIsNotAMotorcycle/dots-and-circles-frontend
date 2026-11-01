@@ -1,10 +1,11 @@
 import styles from './scorecard.module.css';
 
-export default function ScoreCard({ score }) {
+// score is null for a word without a label
+export default function ScoreCard({ score }: { score: number | null }) {
   // Unlabelled uploads have nothing to score against
   if (score === null || score === undefined) return null;
 
-  const scoreColorBrackets = [
+  const scoreColorBrackets: [number, string][] = [
     [1, 'green'],
     [0.9, 'yellow'],
     [0.7, 'orange'],
@@ -16,7 +17,7 @@ export default function ScoreCard({ score }) {
   const scoreColor = scoreColorBrackets.find(([threshold, color]) => {
     if (score >= threshold) return true;
     return false;
-  })[1];
+  })?.[1] ?? 'red';
 
   return (
     <div className={[styles.scoreCard, styles[scoreColor]].join(' ')}>

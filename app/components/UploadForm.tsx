@@ -11,7 +11,7 @@ const MAX_HEIGHT_PER_WIDTH = 8;
 // Resolves to why an image file can't be uploaded, or undefined if it can.
 // The browser applies EXIF orientation as the server does, so the
 // dimensions match what the server sees.
-function checkImage(file) {
+function checkImage(file: File): Promise<string | undefined> {
 	return new Promise((resolve) => {
 		const url = URL.createObjectURL(file);
 		const image = new Image();
@@ -33,7 +33,7 @@ function checkImage(file) {
 }
 
 // The first image among a paste's or drop's files, if any
-const firstImage = (files) => Array.from(files ?? [])
+const firstImage = (files: FileList | null | undefined) => Array.from(files ?? [])
 	.find((file) => file.type.startsWith('image/'));
 
 // Picks an image of one word (from the file picker, a drop or a paste) and
@@ -42,18 +42,23 @@ const firstImage = (files) => Array.from(files ?? [])
 export default function UploadForm({
 	hidden = false,
 	disabled = false,
-	onRead = (file, label) => {},
-	onError = (message) => {},
+	onRead = (file: File, label: string) => {},
+	onError = (message: string | undefined) => {},
+}: {
+	hidden?: boolean;
+	disabled?: boolean;
+	onRead?: (file: File, label: string) => void;
+	onError?: (message: string | undefined) => void;
 }) {
 	// The user's image once it passes checkImage, and its optional label
-	const [upload, setUpload] = useState();
+	const [upload, setUpload] = useState<File>();
 	const [uploadLabel, setUploadLabel] = useState('');
 	// An object URL of upload, for its thumbnail
-	const [uploadPreview, setUploadPreview] = useState();
+	const [uploadPreview, setUploadPreview] = useState<string>();
 	// True while a file is dragged over the drop zone
 	const [dragging, setDragging] = useState(false);
 
-	const takeFile = async (file) => {
+	const takeFile = async (file: File | undefined) => {
 		setUpload(undefined);
 		setUploadPreview((previous) => {
 			if (previous) URL.revokeObjectURL(previous);
@@ -70,7 +75,7 @@ export default function UploadForm({
 		setUploadPreview(URL.createObjectURL(file));
 	};
 
-	const onDrop = (event) => {
+	const onDrop = (event: React.DragEvent) => {
 		event.preventDefault();
 		setDragging(false);
 		const file = firstImage(event.dataTransfer.files);
@@ -107,7 +112,7 @@ export default function UploadForm({
 	// Pastes without one (like text into the label) are left alone.
 	useEffect(() => {
 		if (hidden) return;
-		const onPaste = (event) => {
+		const onPaste = (event: ClipboardEvent) => {
 			const file = firstImage(event.clipboardData?.files);
 			if (!file) return;
 			event.preventDefault();
@@ -117,7 +122,7 @@ export default function UploadForm({
 		return () => { document.removeEventListener('paste', onPaste); };
 	}, [hidden]);
 
-	const onSubmit = (event) => {
+	const onSubmit = (event: React.FormEvent) => {
 		event.preventDefault();
 		if (upload) onRead(upload, uploadLabel.trim());
 	};
@@ -149,7 +154,7 @@ export default function UploadForm({
 							accept="image/*"
 							className={styles.visuallyHidden}
 							onChange={(event) => {
-								takeFile(event.target.files[0]);
+								takeFile(event.target.files?.[0]);
 								// So picking the same file again still counts
 								event.target.value = '';
 							}}

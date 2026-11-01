@@ -2,16 +2,20 @@
 
 import { useState } from 'react';
 
+import type { Source } from './types';
 import styles from './wordforms.module.css';
 
 // Picks where random words come from and asks for one with onLoad(source)
 export default function RandomWordForm({
 	hidden = false,
 	disabled = false,
-	onLoad = (source) => {},
+	onLoad = (source: Source) => {},
+}: {
+	hidden?: boolean;
+	disabled?: boolean;
+	onLoad?: (source: Source) => void;
 }) {
-	// 'photo' or 'synthetic'
-	const [source, setSource] = useState('photo');
+	const [source, setSource] = useState<Source>('photo');
 
 	return (
 		<div className={styles.options} hidden={hidden}>
@@ -19,7 +23,7 @@ export default function RandomWordForm({
 				Random words from
 				<select
 					value={source}
-					onChange={(event) => { setSource(event.target.value); }}
+					onChange={(event) => { setSource(event.target.value as Source); }}
 				>
 					<option value="photo">Real photos</option>
 					<option value="synthetic">Synthetic renders</option>

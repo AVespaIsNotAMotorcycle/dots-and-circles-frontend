@@ -7,11 +7,18 @@ import {
   tokenToLetterIndex, letterColor, abkaiLetter, abkaiLetters, diffLetters,
   QUIET_COLOR, BLANK_COLOR,
 } from './ctc';
+import type { DiffLetter } from './ctc';
+import type { Ctc } from './types';
+import type { InsideKind } from './useTokenHighlight';
 import styles from './predictioncard.module.css';
 const BACKEND = process.env.NEXT_PUBLIC_BACKEND
 
-function HoveredDetail({ hovered, ctc, probs }) {
-	const formatProb = (prob) => prob
+function HoveredDetail({ hovered, ctc, probs }: {
+  hovered: number | undefined;
+  ctc: Ctc;
+  probs: number[];
+}) {
+	const formatProb = (prob: number) => prob
       .toLocaleString(undefined, {
         minimumFractionDigits: 2,
         maximumFractionDigits: 2,
@@ -36,7 +43,13 @@ function HoveredDetail({ hovered, ctc, probs }) {
 // One letter of a predicted word: tinted with its tokens' color in the
 // detailed view, and marked if it's wrong, extra or missing compared to the
 // true word
-function PredictedLetter({ entry, text, highlightedIndex, detailed }) {
+type LetterProps = {
+  highlightedIndex: number;
+  detailed: boolean;
+};
+
+function PredictedLetter({ entry, text, highlightedIndex, detailed }:
+  LetterProps & { entry: DiffLetter; text: string }) {
   const { index, status } = entry;
   const classNames = [styles[status]];
   if (index >= 0 && index === highlightedIndex) {
@@ -53,7 +66,8 @@ function PredictedLetter({ entry, text, highlightedIndex, detailed }) {
   );
 }
 
-function ManchuPrediction({ letters, highlightedIndex, detailed }) {
+function ManchuPrediction({ letters, highlightedIndex, detailed }:
+  LetterProps & { letters: DiffLetter[] }) {
   return (
 	<p className={styles.manchu}>
 	  {letters.map((entry, key) => (
@@ -70,7 +84,7 @@ function ManchuPrediction({ letters, highlightedIndex, detailed }) {
 }
 function AbkaiPrediction({
   abkai, manchu, letters, highlightedIndex, detailed,
-}) {
+}: LetterProps & { abkai: string; manchu: string; letters: DiffLetter[] }) {
   // Spell each Manchu letter separately, so a highlight covers the whole
   // spelling of a letter (both n and g for ᠩ). If the table disagrees with
   // the server's spelling, show the server's as plain text.
@@ -96,6 +110,14 @@ function AbkaiPrediction({
 // cellText(index) gives the cell's letter, '·' for a blank, or '' for none.
 function CollapseColumn({
   label, ctc, cellText, hovered, onHover, onSelect, detailed,
+}: {
+  label: string;
+  ctc: Ctc;
+  cellText: (index: number) => string;
+  hovered: number | undefined;
+  onHover: (index: number) => void;
+  onSelect: (index?: number) => void;
+  detailed: boolean;
 }) {
   return (
 	<div className={styles.collapseColumn}>
@@ -135,48 +157,66 @@ export default function PredictionCard({
   ctc = [],
   probs = [],
   score = 0,
-  preprocessed = null,
+  preprocessed = undefined,
   // The hovered token is shared by every card, so the same image row lights
   // up in all models at once
   hovered = undefined,
-  onHover = (index) => {},
+  onHover = (index: number) => {},
   // Clicks pin the detail on: onSelect(index) for a token, onSelect() for
   // anywhere else in the card. onMove sets the token even while pinned, for
   // the arrow keys.
-  onSelect = (index) => {},
-  onMove = (index) => {},
+  onSelect = (index?: number) => {},
+  onMove = (index: number) => {},
   // Letter colors show only in the detailed view; otherwise all letter
   // tokens share one color. onInside reports the mouse or keyboard focus
   // entering or leaving the card's CTC and prediction.
   detailed = true,
-  onInside = (kind, inside) => {},
+  onInside = (kind: InsideKind, inside: boolean) => {},
+}: {
+  name?: string;
+  model?: string;
+  abkai?: string;
+  manchu?: string;
+  // The true word in Manchu script, if it's known
+  truth?: string | null;
+  ctc?: Ctc;
+  probs?: number[];
+  score?: number | null;
+  // The preprocessed image, as a URL
+  preprocessed?: string;
+  hovered?: number;
+  onHover?: (index: number) => void;
+  onSelect?: (index?: number) => void;
+  onMove?: (index: number) => void;
+  detailed?: boolean;
+  onInside?: (kind: InsideKind, inside: boolean) => void;
 }) {
-  const indexToColor = (index) => {
+  const indexToColor = (index: number) => {
 	if (!ctc[index]) return BLANK_COLOR;
 	if (!detailed) return QUIET_COLOR;
 	return letterColor(tokenToLetterIndex(ctc, index));
   };
   // Opacity from confidence. A floor keeps low-confidence tokens visible,
   // since those are the most interesting ones.
-  const scaleProb = (index) => 0.15 + 0.85 * probs[index];
-  const tokenColor = (index) => (
+  const scaleProb = (index: number) => 0.15 + 0.85 * probs[index];
+  const tokenColor = (index: number) => (
 	`rgba(${[...indexToColor(index), scaleProb(index)].join(', ')})`);
   // The predicted letters, compared to the true word when there is one
-  const letters = truth ? diffLetters(manchu, truth)
-	: manchu.split('').map((letter, index) => ({ letter, index, status: 'ok' }));
+  const letters: DiffLetter[] = truth ? diffLetters(manchu, truth)
+	: manchu.split('').map((letter, index) => ({ letter, index, status: 'ok' as const }));
 
   // The three steps of CTC decoding, one cell per token
-  const startsRun = (index) => index === 0 || ctc[index] !== ctc[index - 1];
+  const startsRun = (index: number) => index === 0 || ctc[index] !== ctc[index - 1];
   // Cells are spelled in Abkai, since Manchu letters are unreadable at one
   // token's height. Invisible marks (variation selectors) show as ◌.
-  const rawCell = (index) => (ctc[index]
+  const rawCell = (index: number) => (ctc[index]
 	? abkaiLetter(ctc[index]) || '◌' : '·');
-  const mergedCell = (index) => (startsRun(index) ? rawCell(index) : '');
-  const wordCell = (index) => (startsRun(index) && ctc[index]
+  const mergedCell = (index: number) => (startsRun(index) ? rawCell(index) : '');
+  const wordCell = (index: number) => (startsRun(index) && ctc[index]
 	? rawCell(index) : '');
   // Arrow keys step through the tokens, for keyboard users
-  const onKeyDown = (event) => {
-	const steps = { ArrowDown: 1, ArrowUp: -1 };
+  const onKeyDown = (event: React.KeyboardEvent) => {
+	const steps: Record<string, number> = { ArrowDown: 1, ArrowUp: -1 };
 	if (!(event.key in steps)) return;
 	event.preventDefault();
 	const next = (hovered ?? -1) + steps[event.key];

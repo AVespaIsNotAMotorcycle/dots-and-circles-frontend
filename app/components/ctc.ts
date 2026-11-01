@@ -1,7 +1,21 @@
 // Helpers for reading a model's CTC output: `ctc` has one entry per image
 // token, holding the most likely letter or null for the blank.
 
-const LETTER_COLORS = [
+import type { Ctc } from './types';
+
+// An RGB color, each channel 0-255
+export type Rgb = [number, number, number];
+
+// One letter of a predicted word lined up against the true word (see
+// diffLetters)
+export type DiffLetter = {
+	letter: string;
+	// The letter's place in the prediction, or -1 if it's missing
+	index: number;
+	status: 'ok' | 'wrong' | 'extra' | 'missing';
+};
+
+const LETTER_COLORS: Rgb[] = [
 	[25, 25, 112],
 	[255, 69, 0],
 	[255, 215, 0],
@@ -10,14 +24,17 @@ const LETTER_COLORS = [
 	[0, 0, 255],
 	[255, 20, 147],
 ];
-export const BLANK_COLOR = [128, 128, 128];
+export const BLANK_COLOR: Rgb = [128, 128, 128];
 // Every letter token's color in the quiet view, before anyone interacts
-export const QUIET_COLOR = [70, 130, 180];
+export const QUIET_COLOR: Rgb = [70, 130, 180];
 
 // CTC decoding collapses runs of the same token and drops blanks, so each
 // new run of a non-blank token adds one letter to the decoded word. Blank
 // tokens don't map to any letter and return -1.
-export function tokenToLetterIndex(ctc, tokenIndex) {
+export function tokenToLetterIndex(
+	ctc: Ctc, tokenIndex: number | undefined,
+): number {
+	if (tokenIndex === undefined) return -1;
 	if (!ctc[tokenIndex]) return -1;
 	var letterIndex = -1;
 	for (var i = 0; i <= tokenIndex; i++) {
@@ -28,7 +45,7 @@ export function tokenToLetterIndex(ctc, tokenIndex) {
 }
 
 // Colors cycle by position in the word, so neighboring letters always differ
-export function letterColor(letterIndex) {
+export function letterColor(letterIndex: number): Rgb {
 	if (letterIndex < 0) return BLANK_COLOR;
 	return LETTER_COLORS[letterIndex % LETTER_COLORS.length];
 }
@@ -36,7 +53,7 @@ export function letterColor(letterIndex) {
 // Abkai for each character the models can output, copied from the backend's
 // ocr/photos.py. Variation selectors and the other invisible marks have no
 // Abkai spelling.
-const MANCHU_TO_ABKAI = {
+const MANCHU_TO_ABKAI: Record<string, string> = {
 	"ᠠ": "a", "ᡝ": "e", "ᡳ": "i", "ᠢ": "i", "ᠣ": "o", "ᡠ": "u", "ᠤ": "u",
 	"ᡡ": "v", "ᠨ": "n", "ᠩ": "ng", "ᠪ": "b", "ᡦ": "p", "ᡤ": "g", "ᠭ": "g",
 	"ᡥ": "h", "ᡴ": "k", "ᠺ": "k'", "ᡬ": "g'", "ᡭ": "h'", "ᠮ": "m", "ᠯ": "l",
@@ -47,12 +64,12 @@ const MANCHU_TO_ABKAI = {
 	"᠊": "",
 };
 
-export function abkaiLetter(letter) {
+export function abkaiLetter(letter: string): string {
 	return MANCHU_TO_ABKAI[letter] ?? '?';
 }
 
 // The Abkai spelling of each letter in a Manchu word, e.g. ᠠᠩᡤᠠ -> a, ng, g, a
-export function abkaiLetters(manchu) {
+export function abkaiLetters(manchu: string): string[] {
 	return manchu.split('').map(abkaiLetter);
 }
 
@@ -66,14 +83,14 @@ const INVISIBLE = new Set(["᠋", "᠌", "᠍", "᠏", "᠇", "᠊"]);
 // status }: index is the letter's place in the prediction (-1 if missing),
 // and status is 'ok', 'wrong' (read as another letter), 'extra' (not in the
 // true word) or 'missing'.
-export function diffLetters(predicted, truth) {
+export function diffLetters(predicted: string, truth: string): DiffLetter[] {
 	const all = predicted.split('');
 	const visible = all.map((letter, index) => ({ letter, index }))
 		.filter(({ letter }) => !INVISIBLE.has(letter));
 	const target = truth.split('');
 
 	// distance[i][j] = edits to turn visible[..i] into target[..j]
-	const distance = visible.map(() => []);
+	const distance: number[][] = visible.map(() => []);
 	distance.push([]);
 	for (var i = 0; i <= visible.length; i++) {
 		for (var j = 0; j <= target.length; j++) {
@@ -91,7 +108,7 @@ export function diffLetters(predicted, truth) {
 	}
 
 	// Walk back from the end to recover the edits, last letter first
-	const steps = [];
+	const steps: DiffLetter[] = [];
 	var i = visible.length;
 	var j = target.length;
 	while (i > 0 || j > 0) {
@@ -112,7 +129,7 @@ export function diffLetters(predicted, truth) {
 	steps.reverse();
 
 	// Put the invisible marks back in their places
-	const result = [];
+	const result: DiffLetter[] = [];
 	var next = 0;
 	for (const step of steps) {
 		while (step.index >= 0 && next < step.index) {

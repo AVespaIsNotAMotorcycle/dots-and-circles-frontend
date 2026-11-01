@@ -1,33 +1,49 @@
 'use client'
 
 import axios from 'axios';
+import type { AxiosResponse } from 'axios';
 import { useState, useEffect } from 'react';
 
 import styles from './demo.module.css';
 import LoadingCard from './LoadingCard';
+import type { LoadingMessage } from './LoadingCard';
 import PredictionCard from './PredictionCard';
 import RandomWordForm from './RandomWordForm';
 import UploadForm from './UploadForm';
 import useTokenHighlight from './useTokenHighlight';
+import type { ErrorResponse, Source, Word } from './types';
 
 const BACKEND = process.env.NEXT_PUBLIC_BACKEND
 
-export default function Demo({ backendAwake = false }) {
+// Which form shows
+type Mode = 'random' | 'upload';
+const MODES: [Mode, string][] = [
+	['random', 'Random word'],
+	['upload', 'Your image'],
+];
+
+export default function Demo({ backendAwake = false }: {
+	backendAwake?: boolean;
+}) {
 	// The word on show: the backend's /random or /upload/single response
-	const [word, setWord] = useState();
+	const [word, setWord] = useState<Word>();
 	const results = word?.results ?? [];
 	// false, or the LoadingCard message to show
-	const [loading, setLoading] = useState(false);
-	// Which form shows: 'random' or 'upload'
-	const [mode, setMode] = useState('random');
+	const [loading, setLoading] = useState<LoadingMessage | false>(false);
+	const [mode, setMode] = useState<Mode>('random');
 	// { mode, message }: shown only under the mode it came from
-	const [error, setError] = useState();
+	const [error, setError] = useState<{ mode: Mode; message: string }>();
 	const highlight = useTokenHighlight();
 
 	// Runs a backend request for a new word: shows loadingMessage meanwhile,
 	// then the word, or the server's {"error": ...} (or fallback) under
 	// errorMode's form
-	const request = (errorMode, loadingMessage, send, fallback) => {
+	const request = (
+		errorMode: Mode,
+		loadingMessage: LoadingMessage,
+		send: () => Promise<AxiosResponse<Word>>,
+		fallback: string,
+	) => {
 		setLoading(loadingMessage);
 		setError(undefined);
 		send()
@@ -38,24 +54,25 @@ export default function Demo({ backendAwake = false }) {
 			.catch((error) => {
 				setError({
 					mode: errorMode,
-					message: error.response?.data?.error ?? fallback,
+					message: (axios.isAxiosError<ErrorResponse>(error)
+						&& error.response?.data?.error) || fallback,
 				});
 			})
 			.finally(() => { setLoading(false); });
 	};
 
-	const load = (source = 'photo') => {
+	const load = (source: Source = 'photo') => {
 		request('random', 'loadingPredictions',
-			() => axios.get(`${BACKEND}/random`, { params: { source } }),
+			() => axios.get<Word>(`${BACKEND}/random`, { params: { source } }),
 			'Couldn\'t load a word.');
 	};
 
-	const read = (file, label) => {
+	const read = (file: File, label: string) => {
 		const body = new FormData();
 		body.append('image', file);
 		if (label) body.append('label', label);
 		request('upload', 'readingUpload',
-			() => axios.post(`${BACKEND}/upload/single`, body),
+			() => axios.post<Word>(`${BACKEND}/upload/single`, body),
 			'Couldn\'t read the image.');
 	};
 
@@ -71,18 +88,17 @@ export default function Demo({ backendAwake = false }) {
 			<h2>Demo</h2>
 			<div className={styles.form}>
 				<div className={styles.modes} role="group" aria-label="Word to read">
-					{[['random', 'Random word'], ['upload', 'Your image']].map(
-						([value, text]) => (
-							<button
-								key={value}
-								type="button"
-								aria-pressed={mode === value}
-								className={mode === value ? styles.selectedMode : undefined}
-								onClick={() => { setMode(value); }}
-							>
-								{text}
-							</button>
-						))}
+					{MODES.map(([value, text]) => (
+						<button
+							key={value}
+							type="button"
+							aria-pressed={mode === value}
+							className={mode === value ? styles.selectedMode : undefined}
+							onClick={() => { setMode(value); }}
+						>
+							{text}
+						</button>
+					))}
 				</div>
 				{/* Hidden rather than removed, so a picked file survives a switch */}
 				<RandomWordForm
@@ -95,12 +111,12 @@ export default function Demo({ backendAwake = false }) {
 					disabled={busy}
 					onRead={read}
 					onError={(message) => {
-						setError(message && { mode: 'upload', message });
+						setError(message ? { mode: 'upload', message } : undefined);
 					}}
 				/>
 				<LoadingCard
 					loading={Boolean(loading) || !backendAwake}
-					message={backendAwake ? loading : 'wakingServer'}
+					message={backendAwake && loading ? loading : 'wakingServer'}
 				/>
 				{error?.mode === mode && (
 					<p className={styles.error} role="alert">{error.message}</p>
@@ -158,11 +174,11 @@ export default function Demo({ backendAwake = false }) {
 							model={result.model}
 							abkai={result['prediction-abkai']}
 							manchu={result['prediction-manchu']}
-							truth={word.manchu}
+							truth={word?.manchu}
 							ctc={result.ctc}
 							probs={result.probs}
 							score={result.score}
-							preprocessed={word['preprocessed-image']}
+							preprocessed={word?.['preprocessed-image']}
 							hovered={highlight.hovered}
 							onHover={highlight.onHover}
 							onSelect={highlight.onSelect}

@@ -1,12 +1,21 @@
 import styles from './loadingcard.module.css';
 
-const MESSAGES = {
+export type LoadingMessage = 'wakingServer' | 'loadingPredictions'
+  | 'readingUpload';
+
+const MESSAGES: Record<LoadingMessage, string> = {
   wakingServer: 'Waking up the server...',
   loadingPredictions: 'Loading lexigraph and model predictions...',
   readingUpload: 'Reading your image...',
 };
 
-export default function LoadingCard({ loading = false, message }) {
+export default function LoadingCard({
+  loading = false,
+  message,
+}: {
+  loading?: boolean;
+  message: LoadingMessage;
+}) {
   if (!loading) return null;
 
   return (

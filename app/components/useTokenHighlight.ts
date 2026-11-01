@@ -1,9 +1,12 @@
 import { useState } from 'react';
 
+// Where the mouse or keyboard focus is reported from
+export type InsideKind = 'mouse' | 'focus';
+
 // Which CTC token is highlighted across every prediction card, and whether
 // the cards show their full letter-color detail
 export default function useTokenHighlight() {
-	const [hovered, setHovered] = useState();
+	const [hovered, setHovered] = useState<number>();
 	// Where the mouse and keyboard focus are, each true while inside a card's
 	// CTC or prediction. The full detail shows while either is.
 	const [inside, setInside] = useState({ mouse: false, focus: false });
@@ -14,14 +17,14 @@ export default function useTokenHighlight() {
 	const [alwaysDetailed, setAlwaysDetailed] = useState(false);
 	const detailed = alwaysDetailed || inside.mouse || inside.focus || pinned;
 
-	const onInside = (kind, isInside) => {
+	const onInside = (kind: InsideKind, isInside: boolean) => {
 		setInside((previous) => ({ ...previous, [kind]: isInside }));
 		if (!isInside && !pinned) setHovered(undefined);
 	};
-	const onHover = (index) => {
+	const onHover = (index: number) => {
 		if (!pinned) setHovered(index);
 	};
-	const onSelect = (index) => {
+	const onSelect = (index?: number) => {
 		if (pinned && (index === undefined || index === hovered)) {
 			setPinned(false);
 			return;
