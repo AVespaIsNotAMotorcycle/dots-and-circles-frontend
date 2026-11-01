@@ -1,0 +1,20 @@
+/* Buttons joined into one switch, with one pressed */
+.switch {
+	display: flex;
+}
+.switch button {
+	border-radius: 0;
+}
+.switch button:first-child {
+	border-radius: 5px 0 0 5px;
+}
+.switch button:last-child {
+	border-radius: 0 5px 5px 0;
+}
+.switch button + button {
+	border-left-width: 0;
+}
+.switch button.selected {
+	background-color: var(--color-foreground);
+	color: var(--color-background);
+}

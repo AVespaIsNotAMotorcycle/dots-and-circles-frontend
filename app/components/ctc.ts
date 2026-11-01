@@ -1,6 +1,7 @@
 // Helpers for reading a model's CTC output: `ctc` has one entry per image
 // token, holding the most likely letter or null for the blank.
 
+import { INVISIBLE } from './romanization';
 import type { Ctc } from './types';
 
 // An RGB color, each channel 0-255
@@ -49,35 +50,6 @@ export function letterColor(letterIndex: number): Rgb {
 	if (letterIndex < 0) return BLANK_COLOR;
 	return LETTER_COLORS[letterIndex % LETTER_COLORS.length];
 }
-
-// Abkai for each character the models can output, copied from the backend's
-// ocr/photos.py. Variation selectors and the other invisible marks have no
-// Abkai spelling.
-const MANCHU_TO_ABKAI: Record<string, string> = {
-	"ᠠ": "a", "ᡝ": "e", "ᡳ": "i", "ᠢ": "i", "ᠣ": "o", "ᡠ": "u", "ᠤ": "u",
-	"ᡡ": "v", "ᠨ": "n", "ᠩ": "ng", "ᠪ": "b", "ᡦ": "p", "ᡤ": "g", "ᠭ": "g",
-	"ᡥ": "h", "ᡴ": "k", "ᠺ": "k'", "ᡬ": "g'", "ᡭ": "h'", "ᠮ": "m", "ᠯ": "l",
-	"ᠰ": "s", "ᡧ": "x", "ᡨ": "t", "ᡩ": "d", "ᠳ": "d", "ᠴ": "c", "ᠵ": "j",
-	"ᠶ": "y", "ᠸ": "w", "ᡵ": "r", "ᡶ": "f", "ᡮ": "ts'", "ᡯ": "dz",
-	"ᡰ": "r'", "ᡱ": "c'", "ᡷ": "z", "ᡟ": "y", " ": " ",
-	"᠋": "", "᠌": "", "᠍": "", "᠏": "", "᠇": "",
-	"᠊": "",
-};
-
-export function abkaiLetter(letter: string): string {
-	return MANCHU_TO_ABKAI[letter] ?? '?';
-}
-
-// The Abkai spelling of each letter in a Manchu word, e.g. ᠠᠩᡤᠠ -> a, ng, g, a
-export function abkaiLetters(manchu: string): string[] {
-	return manchu.split('').map(abkaiLetter);
-}
-
-// Variation selectors and other marks with no visible shape of their own:
-// the ones with no Abkai spelling. Labels never have them, so they're left
-// out when comparing words.
-const INVISIBLE = new Set(Object.keys(MANCHU_TO_ABKAI)
-	.filter((letter) => MANCHU_TO_ABKAI[letter] === ''));
 
 // Lines up a predicted word with the true one by edit distance, letter by
 // letter. Returns the predicted letters in order, with the true letters the

@@ -2,10 +2,12 @@
 
 import ScoreCard from './ScoreCard';
 import {
-	tokenToLetterIndex, letterColor, abkaiLetter, abkaiLetters, diffLetters,
+	tokenToLetterIndex, letterColor, diffLetters,
 	QUIET_COLOR, BLANK_COLOR,
 } from './ctc';
 import type { DiffLetter } from './ctc';
+import { spellLetter, spellLetters } from './romanization';
+import type { Romanization } from './romanization';
 import type { Ctc } from './types';
 import type { InsideKind } from './useTokenHighlight';
 import styles from './predictioncard.module.css';
@@ -73,22 +75,33 @@ function ManchuPrediction({ letters, highlightedIndex, detailed }:
 		</p>
 	);
 }
-function AbkaiPrediction({
-	abkai, manchu, letters, highlightedIndex, detailed,
-}: LetterProps & { abkai: string; manchu: string; letters: DiffLetter[] }) {
+function RomanPrediction({
+	abkai, manchu, romanization, letters, highlightedIndex, detailed,
+}: LetterProps & {
+	abkai: string;
+	manchu: string;
+	romanization: Romanization;
+	letters: DiffLetter[];
+}) {
 	// Spell each Manchu letter separately, so a highlight covers the whole
-	// spelling of a letter (both n and g for ᠩ). If the table disagrees with
-	// the server's spelling, show the server's as plain text.
-	if (abkaiLetters(manchu).join('') !== abkai) {
-		return <p className={styles.abkai}>{abkai}</p>;
+	// spelling of a letter (both n and g for ᠩ)
+	const spelled = spellLetters(manchu, romanization);
+	// If the Abkai table disagrees with the server's, show the server's as
+	// plain text
+	if (romanization === 'abkai' && spelled.join('') !== abkai) {
+		return <p className={styles.roman}>{abkai}</p>;
 	}
+	// Letters the model missed aren't in the prediction, so they're spelled
+	// on their own
+	const text = (entry: DiffLetter) => (entry.index >= 0
+		? spelled[entry.index] : spellLetter(entry.letter, romanization));
 	return (
-		<p className={styles.abkai}>
-			{letters.map((entry, key) => abkaiLetter(entry.letter) && (
+		<p className={styles.roman}>
+			{letters.map((entry, key) => text(entry) && (
 				<PredictedLetter
 					key={key}
 					entry={entry}
-					text={abkaiLetter(entry.letter)}
+					text={text(entry)}
 					highlightedIndex={highlightedIndex}
 					detailed={detailed}
 				/>
@@ -144,6 +157,7 @@ export default function PredictionCard({
 	model = "MODEL DETAILS MISSING",
 	abkai = "ABKAI MISSING",
 	manchu = "MANCHU MISSING",
+	romanization = 'abkai',
 	truth = undefined,
 	ctc = [],
 	probs = [],
@@ -168,6 +182,8 @@ export default function PredictionCard({
 	model?: string;
 	abkai?: string;
 	manchu?: string;
+	// How to spell the prediction and the CTC cells in Latin letters
+	romanization?: Romanization;
 	// The true word in Manchu script, if it's known
 	truth?: string | null;
 	ctc?: Ctc;
@@ -198,10 +214,13 @@ export default function PredictionCard({
 
 	// The three steps of CTC decoding, one cell per token
 	const startsRun = (index: number) => index === 0 || ctc[index] !== ctc[index - 1];
-	// Cells are spelled in Abkai, since Manchu letters are unreadable at one
-	// token's height. Invisible marks (variation selectors) show as ◌.
-	const rawCell = (index: number) => (ctc[index]
-		? abkaiLetter(ctc[index]) || '◌' : '·');
+	// Cells are spelled in Latin letters, since Manchu letters are
+	// unreadable at one token's height. Each is spelled on its own, without
+	// the rest of the word. Invisible marks (variation selectors) show as ◌.
+	const rawCell = (index: number) => {
+		const letter = ctc[index];
+		return letter ? spellLetter(letter, romanization) || '◌' : '·';
+	};
 	const mergedCell = (index: number) => (startsRun(index) ? rawCell(index) : '');
 	const wordCell = (index: number) => (startsRun(index) && ctc[index]
 		? rawCell(index) : '');
@@ -293,9 +312,10 @@ export default function PredictionCard({
 						highlightedIndex={tokenToLetterIndex(ctc, hovered)}
 						detailed={detailed}
 					/>
-					<AbkaiPrediction
+					<RomanPrediction
 						abkai={abkai}
 						manchu={manchu}
+						romanization={romanization}
 						letters={letters}
 						highlightedIndex={tokenToLetterIndex(ctc, hovered)}
 						detailed={detailed}

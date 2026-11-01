@@ -9,6 +9,9 @@ import LoadingCard from './LoadingCard';
 import type { LoadingMessage } from './LoadingCard';
 import PredictionCard from './PredictionCard';
 import RandomWordForm from './RandomWordForm';
+import { ROMANIZATION_NAMES, romanize } from './romanization';
+import type { Romanization } from './romanization';
+import Switch from './Switch';
 import UploadForm from './UploadForm';
 import useTokenHighlight from './useTokenHighlight';
 import type { ErrorResponse, Source, Word } from './types';
@@ -21,6 +24,8 @@ const MODES: [Mode, string][] = [
 	['random', 'Random word'],
 	['upload', 'Your image'],
 ];
+const ROMANIZATIONS = Object.entries(ROMANIZATION_NAMES) as
+	[Romanization, string][];
 
 export default function Demo({ backendAwake = false }: {
 	backendAwake?: boolean;
@@ -33,7 +38,12 @@ export default function Demo({ backendAwake = false }: {
 	const [mode, setMode] = useState<Mode>('random');
 	// { mode, message }: shown only under the mode it came from
 	const [error, setError] = useState<{ mode: Mode; message: string }>();
+	// How words are spelled in Latin letters
+	const [romanization, setRomanization] = useState<Romanization>('abkai');
 	const highlight = useTokenHighlight();
+	// The true word, if known. The server's label is already Abkai.
+	const caption = romanization === 'abkai' ? word?.label
+		: word?.manchu && romanize(word.manchu, romanization);
 
 	// Runs a backend request for a new word: shows loadingMessage meanwhile,
 	// then the word, or the server's {"error": ...} (or fallback) under
@@ -87,19 +97,12 @@ export default function Demo({ backendAwake = false }: {
 		<section className={styles.demo}>
 			<h2>Demo</h2>
 			<div className={styles.form}>
-				<div className={styles.modes} role="group" aria-label="Word to read">
-					{MODES.map(([value, text]) => (
-						<button
-							key={value}
-							type="button"
-							aria-pressed={mode === value}
-							className={mode === value ? styles.selectedMode : undefined}
-							onClick={() => { setMode(value); }}
-						>
-							{text}
-						</button>
-					))}
-				</div>
+				<Switch
+					label="Word to read"
+					options={MODES}
+					value={mode}
+					onChange={setMode}
+				/>
 				{/* Hidden rather than removed, so a picked file survives a switch */}
 				<RandomWordForm
 					hidden={mode !== 'random'}
@@ -126,7 +129,7 @@ export default function Demo({ backendAwake = false }: {
 				<h3>Lexigraph</h3>
 				<figure>
 					<img src={word?.image} />
-					<figcaption>{word?.label}</figcaption>
+					<figcaption>{caption}</figcaption>
 					{word?.font && (
 						<p className={styles.font}>Rendered in {word.font}</p>
 					)}
@@ -167,6 +170,15 @@ export default function Demo({ backendAwake = false }: {
 						/>
 						Always show letter colors
 					</label>
+					<div className={styles.romanization}>
+						<span>Romanization:</span>
+						<Switch
+							label="Romanization"
+							options={ROMANIZATIONS}
+							value={romanization}
+							onChange={setRomanization}
+						/>
+					</div>
 				</section>
 				<div className={styles.predictionCards}>
 					{results.map((result) => (
@@ -176,6 +188,7 @@ export default function Demo({ backendAwake = false }: {
 							model={result.model}
 							abkai={result['prediction-abkai']}
 							manchu={result['prediction-manchu']}
+							romanization={romanization}
 							truth={word?.manchu}
 							ctc={result.ctc}
 							probs={result.probs}

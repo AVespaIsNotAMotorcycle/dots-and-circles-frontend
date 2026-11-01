@@ -26,25 +26,6 @@
 	gap: 1rem;
 }
 
-/* Two buttons joined into one switch */
-.modes {
-	display: flex;
-}
-.modes button {
-	border-radius: 0;
-}
-.modes button:first-child {
-	border-radius: 5px 0 0 5px;
-}
-.modes button:last-child {
-	border-radius: 0 5px 5px 0;
-	border-left-width: 0;
-}
-.modes button.selectedMode {
-	background-color: var(--color-foreground);
-	color: var(--color-background);
-}
-
 .form button:disabled {
 	opacity: .5;
 	pointer-events: none;
@@ -113,6 +94,13 @@
 .ctcLegend h4 {
 	font-weight: 800;
 	display: inline;
+}
+
+.romanization {
+	display: flex;
+	align-items: center;
+	gap: .5rem;
+	margin-top: .5rem;
 }
 
 .detailToggle {
