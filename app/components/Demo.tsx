@@ -131,40 +131,42 @@ export default function Demo({ backendAwake = false }: {
 						<p className={styles.font}>Rendered in {word.font}</p>
 					)}
 				</figure>
-				{word?.label && <ul className={styles.shortResults}>
-				  {results.map((result) => (
-				    <li key={result.name} className={styles.shortResult}>
-						<span>{result.name}</span>
-						<span
-						  className={result.score === 1 ? styles.true
-							  : styles.false}
-						>
-						  {result.score === 1 ? '✓' : '𐄂'}
-						</span>
-					</li>
-				  ))}
-				</ul>}
+				{word?.label && (
+					<ul className={styles.shortResults}>
+						{results.map((result) => (
+							<li key={result.name} className={styles.shortResult}>
+								<span>{result.name}</span>
+								<span
+									className={result.score === 1 ? styles.true
+										: styles.false}
+								>
+									{result.score === 1 ? '✓' : '𐄂'}
+								</span>
+							</li>
+						))}
+					</ul>
+				)}
 			</section>
 			<section>
 				<h3>Model Predictions</h3>
 				<section className={styles.ctcLegend}>
-				  <h4>CTC output legend: </h4>
-				  <span>Colored bands are letters, </span>
-				  <span>grey bands are blanks, </span>
-				  <span>darker color means more confident. </span>
-				  <span>In predictions, red letters are wrong, </span>
-				  <span>letters with a wavy line are extra, </span>
-				  <span>faint letters are missing.</span>
-				  <label className={styles.detailToggle}>
-					<input
-					  type="checkbox"
-					  checked={highlight.alwaysDetailed}
-					  onChange={(event) => {
-						highlight.setAlwaysDetailed(event.target.checked);
-					  }}
-					/>
-					Always show letter colors
-				  </label>
+					<h4>CTC output legend: </h4>
+					<span>Colored bands are letters, </span>
+					<span>grey bands are blanks, </span>
+					<span>darker color means more confident. </span>
+					<span>In predictions, red letters are wrong, </span>
+					<span>letters with a wavy line are extra, </span>
+					<span>faint letters are missing.</span>
+					<label className={styles.detailToggle}>
+						<input
+							type="checkbox"
+							checked={highlight.alwaysDetailed}
+							onChange={(event) => {
+								highlight.setAlwaysDetailed(event.target.checked);
+							}}
+						/>
+						Always show letter colors
+					</label>
 				</section>
 				<div className={styles.predictionCards}>
 					{results.map((result) => (

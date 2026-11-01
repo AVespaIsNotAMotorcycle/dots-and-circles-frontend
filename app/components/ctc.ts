@@ -36,8 +36,8 @@ export function tokenToLetterIndex(
 ): number {
 	if (tokenIndex === undefined) return -1;
 	if (!ctc[tokenIndex]) return -1;
-	var letterIndex = -1;
-	for (var i = 0; i <= tokenIndex; i++) {
+	let letterIndex = -1;
+	for (let i = 0; i <= tokenIndex; i++) {
 		const startsNewLetter = ctc[i] && ctc[i] !== ctc[i - 1];
 		if (startsNewLetter) letterIndex++;
 	}
@@ -73,9 +73,11 @@ export function abkaiLetters(manchu: string): string[] {
 	return manchu.split('').map(abkaiLetter);
 }
 
-// Variation selectors and other marks with no visible shape of their own.
-// Labels never have them, so they're left out when comparing words.
-const INVISIBLE = new Set(["᠋", "᠌", "᠍", "᠏", "᠇", "᠊"]);
+// Variation selectors and other marks with no visible shape of their own:
+// the ones with no Abkai spelling. Labels never have them, so they're left
+// out when comparing words.
+const INVISIBLE = new Set(Object.keys(MANCHU_TO_ABKAI)
+	.filter((letter) => MANCHU_TO_ABKAI[letter] === ''));
 
 // Lines up a predicted word with the true one by edit distance, letter by
 // letter. Returns the predicted letters in order, with the true letters the
@@ -92,8 +94,8 @@ export function diffLetters(predicted: string, truth: string): DiffLetter[] {
 	// distance[i][j] = edits to turn visible[..i] into target[..j]
 	const distance: number[][] = visible.map(() => []);
 	distance.push([]);
-	for (var i = 0; i <= visible.length; i++) {
-		for (var j = 0; j <= target.length; j++) {
+	for (let i = 0; i <= visible.length; i++) {
+		for (let j = 0; j <= target.length; j++) {
 			if (i === 0 || j === 0) {
 				distance[i][j] = i + j;
 				continue;
@@ -109,8 +111,8 @@ export function diffLetters(predicted: string, truth: string): DiffLetter[] {
 
 	// Walk back from the end to recover the edits, last letter first
 	const steps: DiffLetter[] = [];
-	var i = visible.length;
-	var j = target.length;
+	let i = visible.length;
+	let j = target.length;
 	while (i > 0 || j > 0) {
 		const same = i > 0 && j > 0 && visible[i - 1].letter === target[j - 1];
 		if (i > 0 && j > 0
@@ -130,7 +132,7 @@ export function diffLetters(predicted: string, truth: string): DiffLetter[] {
 
 	// Put the invisible marks back in their places
 	const result: DiffLetter[] = [];
-	var next = 0;
+	let next = 0;
 	for (const step of steps) {
 		while (step.index >= 0 && next < step.index) {
 			result.push({ letter: all[next], index: next, status: 'ok' });

@@ -42,8 +42,8 @@ const firstImage = (files: FileList | null | undefined) => Array.from(files ?? [
 export default function UploadForm({
 	hidden = false,
 	disabled = false,
-	onRead = (file: File, label: string) => {},
-	onError = (message: string | undefined) => {},
+	onRead = () => {},
+	onError = () => {},
 }: {
 	hidden?: boolean;
 	disabled?: boolean;

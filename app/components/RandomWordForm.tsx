@@ -9,7 +9,7 @@ import styles from './wordforms.module.css';
 export default function RandomWordForm({
 	hidden = false,
 	disabled = false,
-	onLoad = (source: Source) => {},
+	onLoad = () => {},
 }: {
 	hidden?: boolean;
 	disabled?: boolean;
