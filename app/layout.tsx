@@ -13,6 +13,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
+  // Makes the Open Graph image's URL absolute
+  metadataBase: new URL("https://dots-and-circles.sasha-m-ebersole.com"),
   title: "Dots and Circles",
   description: "See how neural networks built from scratch read Manchu words.",
 };
