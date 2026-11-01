@@ -13,13 +13,9 @@ import useTokenHighlight from './useTokenHighlight';
 const BACKEND = process.env.NEXT_PUBLIC_BACKEND
 
 export default function Demo({ backendAwake = false }) {
-	const [lexigraph, setLexigraph] = useState();
-	const [label, setLabel] = useState();
-	const [labelManchu, setLabelManchu] = useState();
-	const [results, setResults] = useState([]);
-	const [preprocessed, setPreprocessed] = useState();
-	// The font a synthetic word was rendered in
-	const [font, setFont] = useState();
+	// The word on show: the backend's /random or /upload/single response
+	const [word, setWord] = useState();
+	const results = word?.results ?? [];
 	// false, or the LoadingCard message to show
 	const [loading, setLoading] = useState(false);
 	// Which form shows: 'random' or 'upload'
@@ -29,12 +25,7 @@ export default function Demo({ backendAwake = false }) {
 	const highlight = useTokenHighlight();
 
 	const show = (data) => {
-		setLexigraph(data.image);
-		setLabel(data.label);
-		setLabelManchu(data.manchu);
-		setResults(data.results);
-		setPreprocessed(data['preprocessed-image']);
-		setFont(data.font);
+		setWord(data);
 		highlight.reset();
 	};
 	// The server's {"error": ...} message, or a fallback
@@ -116,11 +107,13 @@ export default function Demo({ backendAwake = false }) {
 			<section className={styles.lexigraph}>
 				<h3>Lexigraph</h3>
 				<figure>
-					<img src={lexigraph} />
-					<figcaption>{label}</figcaption>
-					{font && <p className={styles.font}>Rendered in {font}</p>}
+					<img src={word?.image} />
+					<figcaption>{word?.label}</figcaption>
+					{word?.font && (
+						<p className={styles.font}>Rendered in {word.font}</p>
+					)}
 				</figure>
-				{label && <ul className={styles.shortResults}>
+				{word?.label && <ul className={styles.shortResults}>
 				  {results.map((result) => (
 				    <li key={result.name} className={styles.shortResult}>
 						<span>{result.name}</span>
@@ -163,11 +156,11 @@ export default function Demo({ backendAwake = false }) {
 							model={result.model}
 							abkai={result['prediction-abkai']}
 							manchu={result['prediction-manchu']}
-							truth={labelManchu}
+							truth={word.manchu}
 							ctc={result.ctc}
 							probs={result.probs}
 							score={result.score}
-							preprocessed={preprocessed}
+							preprocessed={word['preprocessed-image']}
 							hovered={highlight.hovered}
 							onHover={highlight.onHover}
 							onSelect={highlight.onSelect}
