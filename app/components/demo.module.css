@@ -38,6 +38,22 @@
 .lexigraph figure {
 	width: fit-content;
 }
+/* With the predictions below rather than beside it, the lexigraph has room
+   for the result summary on its right */
+@media (max-width: 599.98px) {
+	.lexigraph {
+		display: flex;
+		flex-wrap: wrap;
+		align-items: flex-start;
+		column-gap: 2rem;
+	}
+	.lexigraph h3 {
+		flex-basis: 100%;
+	}
+	.lexigraph .shortResult:first-child {
+		margin-top: 0;
+	}
+}
 .lexigraph figcaption {
 	font-size: 2rem;
 	text-align: center;
