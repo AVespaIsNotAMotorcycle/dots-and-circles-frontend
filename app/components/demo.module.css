@@ -61,6 +61,14 @@
 	flex-direction: column;
 	gap: .25rem;
 }
+/* Browsers size a select differently from a button with the same padding,
+   so both get an explicit height to line up side by side */
+.options select,
+.options > button {
+	box-sizing: border-box;
+	height: 2.75rem;
+	line-height: 1.5rem;
+}
 .options input {
 	/* Undo the global text-input sizing */
 	margin: 0;
