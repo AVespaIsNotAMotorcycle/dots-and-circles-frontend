@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 
 import { alignWords, pageWords, wordLetters } from './pagecompare';
-import type { Page, PageBox, RandomPage } from './types';
+import type { Page, PageBox, SamplePage } from './types';
 import styles from './pageresult.module.css';
 
 // How the page was turned to straighten it, or undefined if it barely was
@@ -20,7 +20,7 @@ const percent = (value: number) => value
 function Comparison({ abkai, expected, score }: {
 	abkai: string;
 	expected: string;
-	score?: RandomPage['score'];
+	score?: SamplePage['score'];
 }) {
 	const predicted = pageWords(abkai);
 	const truth = pageWords(expected);
@@ -176,10 +176,10 @@ function PageImage({ page }: { page: Page }) {
 
 // A page read by POST /upload/multiple or GET /random?source=page: the page
 // with its boxes drawn over it, its text in Manchu and Abkai, and how that
-// compares with the Abkai expected (the user's, or a random page's
+// compares with the Abkai expected (the user's, or a sample page's
 // transcription)
 export default function PageResult({ page, expected = '' }: {
-	page: Page | RandomPage;
+	page: Page | SamplePage;
 	expected?: string;
 }) {
 	const random = 'transcription' in page ? page : undefined;

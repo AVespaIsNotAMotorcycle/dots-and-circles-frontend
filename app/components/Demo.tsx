@@ -10,26 +10,27 @@ import PageResult from './PageResult';
 import type { LoadingMessage } from './LoadingCard';
 import PredictionCard from './PredictionCard';
 import RandomWordForm from './RandomWordForm';
+import SamplePageForm from './SamplePageForm';
 import { ROMANIZATION_NAMES, romanize } from './romanization';
 import type { Romanization } from './romanization';
 import Switch from './Switch';
 import UploadForm from './UploadForm';
 import useTokenHighlight from './useTokenHighlight';
-import type { ErrorResponse, Page, RandomPage, Source, Word } from './types';
+import type { ErrorResponse, Page, SamplePage, Source, Word } from './types';
 
 const BACKEND = process.env.NEXT_PUBLIC_BACKEND
 
 // Which form shows
-type Mode = 'random' | 'upload' | 'randomPage' | 'page';
+type Mode = 'random' | 'upload' | 'samplePage' | 'page';
 const MODES: [Mode, string][] = [
 	['random', 'Random word'],
 	['upload', 'Your image'],
-	['randomPage', 'Random page'],
+	['samplePage', 'Sample page'],
 	['page', 'Your page'],
 ];
 // The modes that show a page rather than a word
-type PageMode = 'randomPage' | 'page';
-const isPageMode = (mode: Mode): mode is PageMode => mode === 'randomPage'
+type PageMode = 'samplePage' | 'page';
+const isPageMode = (mode: Mode): mode is PageMode => mode === 'samplePage'
 	|| mode === 'page';
 const ROMANIZATIONS = Object.entries(ROMANIZATION_NAMES) as
 	[Romanization, string][];
@@ -42,13 +43,15 @@ export default function Demo({ backendAwake = false }: {
 	const results = word?.results ?? [];
 	// The page on show in each page mode: the backend's /upload/multiple or
 	// /random?source=page response, and the Abkai expected ('' if unknown):
-	// the user's, or the random page's transcription
+	// the user's, or the sample page's transcription
 	const [pages, setPages] = useState<
-		Partial<Record<PageMode, { result: Page | RandomPage; expected: string }>>
+		Partial<Record<PageMode, { result: Page | SamplePage; expected: string }>>
 	>({});
 	// false, or the LoadingCard message to show
 	const [loading, setLoading] = useState<LoadingMessage | false>(false);
-	const [mode, setMode] = useState<Mode>('randomPage');
+	const [mode, setMode] = useState<Mode>('samplePage');
+	// The sample pages' names, from GET /pages
+	const [pageNames, setPageNames] = useState<string[]>([]);
 	const page = isPageMode(mode) ? pages[mode] : undefined;
 	// { mode, message }: shown only under the mode it came from
 	const [error, setError] = useState<{ mode: Mode; message: string }>();
@@ -115,23 +118,28 @@ export default function Demo({ backendAwake = false }: {
 			});
 	};
 
-	const loadPage = () => {
-		request('randomPage', 'loadingPage',
-			() => axios.get<RandomPage>(`${BACKEND}/random`,
-				{ params: { source: 'page' } }),
+	// Loads the sample page with this name, or any one for ''
+	const loadPage = (name = '') => {
+		request('samplePage', 'loadingPage',
+			() => axios.get<SamplePage>(`${BACKEND}/random`,
+				{ params: { source: 'page', ...(name && { name }) } }),
 			'Couldn\'t load a page.',
 			(result) => {
 				setPages((previous) => ({
 					...previous,
-					randomPage: { result, expected: result.transcription },
+					samplePage: { result, expected: result.transcription },
 				}));
 			});
 	};
 
-	// A random page is on show as soon as the server is awake
+	// A random page is on show as soon as the server is awake. Without the
+	// list of pages, only a random one can be picked.
 	useEffect(() => {
 		if (!backendAwake) return;
 		loadPage();
+		axios.get<{ pages: string[] }>(`${BACKEND}/pages`)
+			.then(({ data }) => { setPageNames(data.pages); })
+			.catch(() => {});
 	}, [backendAwake]);
 
 	const busy = !backendAwake || Boolean(loading);
@@ -158,11 +166,12 @@ export default function Demo({ backendAwake = false }: {
 					disabled={busy}
 					onLoad={load}
 				/>
-				<div className={styles.randomPage} hidden={mode !== 'randomPage'}>
-					<button type="button" disabled={busy} onClick={loadPage}>
-						Load Random Page
-					</button>
-				</div>
+				<SamplePageForm
+					hidden={mode !== 'samplePage'}
+					disabled={busy}
+					names={pageNames}
+					onLoad={loadPage}
+				/>
 				<UploadForm
 					hidden={mode !== 'upload'}
 					disabled={busy}

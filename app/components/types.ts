@@ -77,8 +77,9 @@ export type Page = {
 	boxes: PageBox[];
 };
 
-// A random real page read by one model: GET /random?source=page
-export type RandomPage = Page & {
+// A sample real page read by one model: GET /random?source=page, with
+// ?name= for a particular one
+export type SamplePage = Page & {
 	source: 'page';
 	name: string;
 	// The page as saved, before deskewing, as a data: URL

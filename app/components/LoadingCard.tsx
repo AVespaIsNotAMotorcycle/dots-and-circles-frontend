@@ -8,7 +8,7 @@ const MESSAGES: Record<LoadingMessage, string> = {
 	loadingPredictions: 'Loading lexigraph and model predictions...',
 	readingUpload: 'Reading your image...',
 	readingPage: 'Reading your page...',
-	loadingPage: 'Loading and reading a random page...',
+	loadingPage: 'Loading and reading a sample page...',
 };
 
 export default function LoadingCard({
