@@ -133,3 +133,18 @@ export function boxStatuses(boxes: PageBox[], expected: string):
 	});
 	return statuses;
 }
+
+// The pages of a transcription: its paragraphs, separated by empty lines
+export const pageTexts = (text: string) => text
+	.split(/\n\s*\n/)
+	.map((page) => page.trim())
+	.filter(Boolean);
+
+// The text to compare page number (from 1) of a PDF with: paragraph number
+// of the transcription. A transcription of just one paragraph is taken as
+// the text of whichever page is read on its own (wholePdf false).
+export function textForPage(text: string, number: number, wholePdf: boolean) {
+	const pages = pageTexts(text);
+	if (!wholePdf && pages.length === 1) return pages[0];
+	return pages[number - 1] ?? '';
+}

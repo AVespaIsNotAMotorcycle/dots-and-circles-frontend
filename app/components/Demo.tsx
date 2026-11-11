@@ -101,7 +101,11 @@ export default function Demo({ backendAwake = false }: {
 	// Reads every page of a PDF in turn, each sent once the one before it is
 	// back, showing each as it comes. A page that can't be rendered or read
 	// shows why, and the rest are still read.
-	const readAll = async (pages: number, render: (page: number) => Promise<File>) => {
+	const readAll = async (
+		pages: number,
+		render: (page: number) => Promise<File>,
+		expected: (page: number) => string,
+	) => {
 		const current = ++run.current;
 		readingPdf.current = true;
 		setError(undefined);
@@ -115,10 +119,10 @@ export default function Demo({ backendAwake = false }: {
 				const file = await render(page);
 				if (current !== run.current) return;
 				const { data } = await inTurn(() => postPage(file));
-				reading = { title, result: data, expected: '' };
+				reading = { title, result: data, expected: expected(page) };
 			} catch (error) {
 				reading = {
-					title, expected: '',
+					title, expected: expected(page),
 					error: errorMessage(error, 'Couldn\'t read this page.'),
 				};
 			}

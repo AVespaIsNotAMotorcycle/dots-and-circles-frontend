@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react';
 
+import { textForPage } from './pagecompare';
 import { isPdf, openPdf, renderPage } from './pdf';
 import type { PDFDocumentProxy } from './pdf';
 import styles from './wordforms.module.css';
@@ -42,9 +43,14 @@ export default function UploadForm({
 	hidden?: boolean;
 	disabled?: boolean;
 	onRead?: (file: File, label: string) => void;
-	// Asks for every page of a PDF to be read: how many there are, and a
-	// function that renders one (from 1) as an image to send
-	onReadAll?: (pages: number, render: (page: number) => Promise<File>) => void;
+	// Asks for every page of a PDF to be read: how many there are, a
+	// function that renders one (from 1) as an image to send, and one that
+	// gives the Abkai expected on it
+	onReadAll?: (
+		pages: number,
+		render: (page: number) => Promise<File>,
+		expected: (page: number) => string,
+	) => void;
 	// Called whenever a new file is picked, so a PDF being read can stop
 	onFileChange?: () => void;
 	onError?: (message: string | undefined) => void;
@@ -63,6 +69,8 @@ export default function UploadForm({
 	// page it names is rendered
 	const [pageInput, setPageInput] = useState('1');
 	const [rendering, setRendering] = useState(false);
+	// The PDF page that upload is, which the box may no longer name mid-edit
+	const [shownPage, setShownPage] = useState(1);
 	// The PDF open now, to close when it's replaced. Each new file or page
 	// bumps request, so a slow render that's been overtaken is dropped.
 	const openDoc = useRef<PDFDocumentProxy>(undefined);
@@ -87,6 +95,7 @@ export default function UploadForm({
 		try {
 			const file = await renderPage(doc, number, name);
 			if (current !== request.current) return;
+			setShownPage(number);
 			setUpload(file);
 			setUploadPreview(URL.createObjectURL(file));
 		} catch {
@@ -187,7 +196,11 @@ export default function UploadForm({
 
 	const onSubmit = (event: React.FormEvent) => {
 		event.preventDefault();
-		if (upload) onRead(upload, uploadLabel.trim());
+		if (!upload) return;
+		// A PDF's page is compared with its own paragraph of the text
+		onRead(upload, pdf
+			? textForPage(uploadLabel, shownPage, false)
+			: uploadLabel.trim());
 	};
 
 	return (
@@ -272,22 +285,23 @@ export default function UploadForm({
 					[Optional] Abkai transcription for comparison:
 				</label>
 				<span id="upload-abkai-hint" className={styles.hint}>
-					A line per column, words separated by spaces.
-					{pdf && ' Used for one page only, not when reading all of them.'}
+					A line per column, words separated by spaces. For a PDF, separate
+					pages with an empty line.
+
 				</span>
 				<textarea
 					id="upload-abkai"
 					aria-describedby="upload-abkai-hint"
 					value={uploadLabel}
 					rows={4}
-					placeholder={'abka na\nbe'}
+					placeholder={'abka na\nbe\n\nmuke'}
 					onChange={(event) => { setUploadLabel(event.target.value); }}
 				/>
 			</div>
 			</div>
 			<div className={styles.submitRow}>
 				<button type="submit" disabled={disabled || !upload}>
-					{pdf ? `Read Page ${pageInput}` : 'Read My Page'}
+					{pdf ? `Read Page ${shownPage}` : 'Read My Page'}
 				</button>
 				{pdf && (
 					<button
@@ -295,7 +309,10 @@ export default function UploadForm({
 						disabled={disabled}
 						onClick={() => {
 							const { doc, name } = pdf;
-							onReadAll(doc.numPages, (page) => renderPage(doc, page, name));
+							const text = uploadLabel;
+							onReadAll(doc.numPages,
+								(page) => renderPage(doc, page, name),
+								(page) => textForPage(text, page, true));
 						}}
 					>
 						{`Read All ${pdf.doc.numPages} Pages`}
