@@ -29,8 +29,12 @@
 	flex-direction: column;
 	gap: .25rem;
 }
-.options > button[type="submit"] {
-	align-self: center;
+/* The buttons, centred below the inputs */
+.submitRow {
+	display: flex;
+	flex-wrap: wrap;
+	justify-content: center;
+	gap: .5rem;
 }
 .options input {
 	/* Undo the global text-input sizing */

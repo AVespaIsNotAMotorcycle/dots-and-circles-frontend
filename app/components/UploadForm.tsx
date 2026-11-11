@@ -35,11 +35,18 @@ export default function UploadForm({
 	hidden = false,
 	disabled = false,
 	onRead = () => {},
+	onReadAll = () => {},
+	onFileChange = () => {},
 	onError = () => {},
 }: {
 	hidden?: boolean;
 	disabled?: boolean;
 	onRead?: (file: File, label: string) => void;
+	// Asks for every page of a PDF to be read: how many there are, and a
+	// function that renders one (from 1) as an image to send
+	onReadAll?: (pages: number, render: (page: number) => Promise<File>) => void;
+	// Called whenever a new file is picked, so a PDF being read can stop
+	onFileChange?: () => void;
 	onError?: (message: string | undefined) => void;
 }) {
 	// The user's image once it passes checkImage (or the PDF's page, once
@@ -91,6 +98,7 @@ export default function UploadForm({
 
 	const takeFile = async (file: File | undefined) => {
 		const current = ++request.current;
+		onFileChange();
 		clearUpload();
 		setRendering(false);
 		onError(undefined);
@@ -265,6 +273,7 @@ export default function UploadForm({
 				</label>
 				<span id="upload-abkai-hint" className={styles.hint}>
 					A line per column, words separated by spaces.
+					{pdf && ' Used for one page only, not when reading all of them.'}
 				</span>
 				<textarea
 					id="upload-abkai"
@@ -276,9 +285,23 @@ export default function UploadForm({
 				/>
 			</div>
 			</div>
-			<button type="submit" disabled={disabled || !upload}>
-				Read My Page
-			</button>
+			<div className={styles.submitRow}>
+				<button type="submit" disabled={disabled || !upload}>
+					{pdf ? `Read Page ${pageInput}` : 'Read My Page'}
+				</button>
+				{pdf && (
+					<button
+						type="button"
+						disabled={disabled}
+						onClick={() => {
+							const { doc, name } = pdf;
+							onReadAll(doc.numPages, (page) => renderPage(doc, page, name));
+						}}
+					>
+						{`Read All ${pdf.doc.numPages} Pages`}
+					</button>
+				)}
+			</div>
 		</form>
 	);
 }

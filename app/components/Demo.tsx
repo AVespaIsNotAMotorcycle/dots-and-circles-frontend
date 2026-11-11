@@ -2,7 +2,7 @@
 
 import axios from 'axios';
 import type { AxiosResponse } from 'axios';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 
 import styles from './demo.module.css';
 import LoadingCard from './LoadingCard';
@@ -14,51 +14,128 @@ import type { ErrorResponse, Page, SamplePage } from './types';
 
 const BACKEND = process.env.NEXT_PUBLIC_BACKEND
 
-// Reads the user's page, or loads a sample one, and shows how it was read
+// One page read: the backend's /upload/multiple or /random?source=page
+// response and the Abkai expected ('' if unknown), or why it couldn't be
+// read. title heads it, for a PDF's pages.
+type Reading = {
+	title?: string;
+	result?: Page | SamplePage;
+	expected: string;
+	error?: string;
+};
+
+// The server's {"error": ...} for a failed request, or fallback
+const errorMessage = (error: unknown, fallback: string) => (
+	axios.isAxiosError<ErrorResponse>(error) && error.response?.data?.error
+) || fallback;
+
+// Sends an image of a page to be read
+const postPage = (file: File) => {
+	const body = new FormData();
+	body.append('image', file);
+	return axios.post<Page>(`${BACKEND}/upload/multiple`, body);
+};
+
+// Reads the user's page (or a PDF's pages), or loads a sample one, and
+// shows how each was read
 export default function Demo({ backendAwake = false }: {
 	backendAwake?: boolean;
 }) {
-	// The page on show, the backend's /upload/multiple or
-	// /random?source=page response, and the Abkai expected ('' if unknown):
-	// the user's, or the sample page's transcription
-	const [page, setPage] = useState<{
-		result: Page | SamplePage;
-		expected: string;
-	}>();
+	// The pages on show: one, or a PDF's, in order, as they're read
+	const [readings, setReadings] = useState<Reading[]>([]);
 	// false, or the LoadingCard message to show
 	const [loading, setLoading] = useState<LoadingMessage | false>(false);
+	// While a PDF is read: the page being read, out of how many
+	const [progress, setProgress] = useState<{ page: number; pages: number }>();
 	const [error, setError] = useState<string>();
 	// The sample pages' names, from GET /pages
 	const [pageNames, setPageNames] = useState<string[]>([]);
+	// Bumped by every new read (or new file), so a PDF being read stops
+	// before its next page
+	const run = useRef(0);
+	// True while a PDF's pages are being read
+	const readingPdf = useRef(false);
+	// The last page read sent. Each waits for the one before it, even one
+	// whose result is no longer wanted (after Stop), so the server only ever
+	// reads one page of ours at a time.
+	const lastSend = useRef<Promise<unknown>>(Promise.resolve());
+	const inTurn = <T,>(send: () => Promise<T>): Promise<T> => {
+		const next = lastSend.current.catch(() => {}).then(send);
+		lastSend.current = next;
+		return next;
+	};
 
-	// Runs a backend request for a page: shows loadingMessage meanwhile,
-	// then the page, or the server's {"error": ...} (or fallback)
+	// Runs a backend request for one page: shows loadingMessage meanwhile,
+	// then the page, or the server's error (or fallback)
 	const request = <T extends Page,>(
 		loadingMessage: LoadingMessage,
 		send: () => Promise<AxiosResponse<T>>,
 		fallback: string,
 		expected: (result: T) => string,
 	) => {
+		const current = ++run.current;
+		readingPdf.current = false;
+		setProgress(undefined);
 		setLoading(loadingMessage);
 		setError(undefined);
-		send()
-			.then(({ data }) => { setPage({ result: data, expected: expected(data) }); })
-			.catch((error) => {
-				setError((axios.isAxiosError<ErrorResponse>(error)
-					&& error.response?.data?.error) || fallback);
+		inTurn(send)
+			.then(({ data }) => {
+				if (current !== run.current) return;
+				setReadings([{ result: data, expected: expected(data) }]);
 			})
-			.finally(() => { setLoading(false); });
+			.catch((error) => {
+				if (current === run.current) setError(errorMessage(error, fallback));
+			})
+			.finally(() => {
+				if (current === run.current) setLoading(false);
+			});
 	};
 
 	// The server ignores a label for a page, so the comparison with the
 	// expected Abkai is made here
 	const readPage = (file: File, expected: string) => {
-		const body = new FormData();
-		body.append('image', file);
-		request('readingPage',
-			() => axios.post<Page>(`${BACKEND}/upload/multiple`, body),
-			'Couldn\'t read the page.',
+		request('readingPage', () => postPage(file), 'Couldn\'t read the page.',
 			() => expected);
+	};
+
+	// Reads every page of a PDF in turn, each sent once the one before it is
+	// back, showing each as it comes. A page that can't be rendered or read
+	// shows why, and the rest are still read.
+	const readAll = async (pages: number, render: (page: number) => Promise<File>) => {
+		const current = ++run.current;
+		readingPdf.current = true;
+		setError(undefined);
+		setReadings([]);
+		setLoading('readingPdf');
+		for (let page = 1; page <= pages; page++) {
+			setProgress({ page, pages });
+			const title = `Page ${page}`;
+			let reading: Reading;
+			try {
+				const file = await render(page);
+				if (current !== run.current) return;
+				const { data } = await inTurn(() => postPage(file));
+				reading = { title, result: data, expected: '' };
+			} catch (error) {
+				reading = {
+					title, expected: '',
+					error: errorMessage(error, 'Couldn\'t read this page.'),
+				};
+			}
+			if (current !== run.current) return;
+			setReadings((previous) => [...previous, reading]);
+		}
+		readingPdf.current = false;
+		setProgress(undefined);
+		setLoading(false);
+	};
+
+	// Stops a PDF being read after the page in flight
+	const stop = () => {
+		run.current++;
+		readingPdf.current = false;
+		setProgress(undefined);
+		setLoading(false);
 	};
 
 	// Loads the sample page with this name, or any one for ''
@@ -87,6 +164,8 @@ export default function Demo({ backendAwake = false }: {
 				<UploadForm
 					disabled={busy}
 					onRead={readPage}
+					onReadAll={readAll}
+					onFileChange={() => { if (readingPdf.current) stop(); }}
 					onError={setError}
 				/>
 				<SamplePageForm
@@ -97,10 +176,28 @@ export default function Demo({ backendAwake = false }: {
 				<LoadingCard
 					loading={Boolean(loading) || !backendAwake}
 					message={backendAwake && loading ? loading : 'wakingServer'}
-				/>
+					text={backendAwake && progress
+						? `Reading page ${progress.page} of ${progress.pages}...`
+						: undefined}
+				>
+					{progress && (
+						<button type="button" className={styles.stop} onClick={stop}>
+							Stop
+						</button>
+					)}
+				</LoadingCard>
 				{error && <p className={styles.error} role="alert">{error}</p>}
 			</div>
-			{page && <PageResult page={page.result} expected={page.expected} />}
+			{readings.map(({ title, result, expected, error: problem }, index) => (
+				result
+					? <PageResult key={index} page={result} expected={expected} title={title} />
+					: (
+						<section key={index} className={styles.failedPage}>
+							<h3>{title}</h3>
+							<p className={styles.error}>{problem}</p>
+						</section>
+					)
+			))}
 		</section>
 	);
 }

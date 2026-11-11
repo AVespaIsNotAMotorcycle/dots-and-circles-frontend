@@ -205,9 +205,11 @@ function PageImage({ page, expected }: { page: Page; expected: string }) {
 // with its boxes drawn over it, its text in Manchu and Abkai, and how that
 // compares with the Abkai expected (the user's, or a sample page's
 // transcription)
-export default function PageResult({ page, expected = '' }: {
+export default function PageResult({ page, expected = '', title = 'Page' }: {
 	page: Page | SamplePage;
 	expected?: string;
+	// Its heading, e.g. a PDF's page number
+	title?: string;
 }) {
 	const random = 'transcription' in page ? page : undefined;
 	const angle = describeAngle(page.angle);
@@ -217,7 +219,7 @@ export default function PageResult({ page, expected = '' }: {
 
 	return (
 		<section className={styles.page}>
-			<h3>Page</h3>
+			<h3>{title}</h3>
 			<div className={styles.reading}>
 			<figure className={styles.marked}>
 				<PageImage page={page} expected={expected} />
