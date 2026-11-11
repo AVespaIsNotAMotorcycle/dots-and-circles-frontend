@@ -2,6 +2,7 @@
 
 import { diffLetters } from './ctc';
 import type { DiffLetter } from './ctc';
+import type { PageBox } from './types';
 
 // The loanword marks the user might type, all counted as one. The server
 // writes ‘ after k, g and h and ʻ elsewhere.
@@ -99,4 +100,36 @@ export function wordLetters({ predicted = '', expected = '' }: AlignedWord):
 	return diffLetters(normalize(predicted), normalize(expected))
 		.map((entry) => (entry.index >= 0
 			? { ...entry, letter: predicted[entry.index] } : entry));
+}
+
+// How each box of a page compares with the expected Abkai, in the order of
+// page.boxes: 'right' for a Manchu box whose words were all read right,
+// 'wrong' if any was read wrong (or is extra), and undefined for other
+// boxes, low-confidence ones, and every box when nothing is expected.
+// The page's text has a line per column, read top to bottom, of the Manchu
+// boxes read with enough confidence (and as something), so each of those
+// boxes' words are its next words, in that order.
+export function boxStatuses(boxes: PageBox[], expected: string):
+	('right' | 'wrong' | undefined)[] {
+	const statuses: ('right' | 'wrong' | undefined)[] = boxes.map(() => undefined);
+	if (!pageWords(expected).length) return statuses;
+	const inText = boxes
+		.map((box, index) => ({ box, index }))
+		.filter(({ box }) => box.kind === 'manchu' && box.line !== null
+			&& !box['low-confidence'] && box['prediction-abkai'])
+		.sort((a, b) => (a.box.line! - b.box.line!)
+			|| (a.box.position - b.box.position));
+	const words = inText.map(({ box }) => pageWords(box['prediction-abkai']!));
+	const aligned = alignWords(words.flat(), pageWords(expected))
+		.filter(({ predicted }) => predicted !== undefined);
+	let next = 0;
+	inText.forEach(({ index }, i) => {
+		const mine = aligned.slice(next, next + words[i].length);
+		next += words[i].length;
+		if (mine.length) {
+			statuses[index] = mine.every(({ status }) => status === 'right')
+				? 'right' : 'wrong';
+		}
+	});
+	return statuses;
 }

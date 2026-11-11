@@ -45,8 +45,26 @@
 	vector-effect: non-scaling-stroke;
 }
 .manchuBox rect {
-	stroke: green;
 	fill: rgba(255, 255, 255, .55);
+}
+/* Manchu read right or wrong, by the expected text, or with none to compare */
+.right rect {
+	stroke: green;
+}
+.right text {
+	fill: darkgreen;
+}
+.wrong rect {
+	stroke: red;
+}
+.wrong text {
+	fill: darkred;
+}
+.unchecked rect {
+	stroke: #1e6fd9;
+}
+.unchecked text {
+	fill: #0b3d91;
 }
 /* Manchu left out of the text for low confidence */
 .manchuBox.lowConfidence rect {
@@ -56,7 +74,7 @@
 	fill: #8a6d00;
 }
 .otherBox rect {
-	stroke: red;
+	stroke: grey;
 	fill: transparent;
 }
 .manchuBox:hover rect, .otherBox:hover rect,
@@ -67,14 +85,13 @@
 	fill: rgba(255, 255, 255, .8);
 }
 .otherBox:hover rect, .otherBox:focus-visible rect {
-	fill: rgba(255, 0, 0, .1);
+	fill: rgba(128, 128, 128, .15);
 }
 /* Written down the box, centred in it */
 .manchuBox text {
 	writing-mode: vertical-rl;
 	text-anchor: middle;
 	dominant-baseline: central;
-	fill: darkgreen;
 	font-weight: 800;
 	pointer-events: none;
 }

@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 
-import { alignWords, pageWords, wordLetters } from './pagecompare';
+import { alignWords, boxStatuses, pageWords, wordLetters } from './pagecompare';
 import type { Page, PageBox, SamplePage } from './types';
 import styles from './pageresult.module.css';
 
@@ -50,12 +50,20 @@ function Comparison({ abkai, expected, score }: {
 	);
 }
 
-// One box on the page: green with its Abkai reading written down it for
-// Manchu, yellow for Manchu read with too little confidence to be in the
-// text, red for other text. Clicking it (or Enter or Space) calls onOpen.
-function BoxOutline({ box, onOpen }: { box: PageBox; onOpen: () => void }) {
+// One box on the page. Manchu has its Abkai reading written down it, and is
+// green if read right, red if read wrong, blue with nothing to compare it
+// with, and yellow if read with too little confidence to be in the text.
+// Other text is grey. Clicking it (or Enter or Space) calls onOpen.
+function BoxOutline({ box, status, onOpen }: {
+	box: PageBox;
+	// How its reading compares with the expected text, if it does
+	status?: 'right' | 'wrong';
+	onOpen: () => void;
+}) {
 	const manchu = box.kind === 'manchu';
 	const unsure = manchu && Boolean(box['low-confidence']);
+	const verdict = status === 'right' ? ', read right'
+		: status === 'wrong' ? ', read wrong' : '';
 	const reading = box['prediction-abkai'] ?? '';
 	// Written top to bottom, as wide as the box allows, but no longer than it
 	const fontSize = Math.min(box.w * 0.6,
@@ -63,11 +71,12 @@ function BoxOutline({ box, onOpen }: { box: PageBox; onOpen: () => void }) {
 	return (
 		<g
 			className={[manchu ? styles.manchuBox : styles.otherBox,
+				manchu && !unsure && styles[status ?? 'unchecked'],
 				unsure && styles.lowConfidence].filter(Boolean).join(' ')}
 			role="button"
 			tabIndex={0}
 			aria-label={manchu
-				? `Manchu word read as ${reading}${unsure ? ', with low confidence' : ''}`
+				? `Manchu word read as ${reading}${unsure ? ', with low confidence' : verdict}`
 				: 'Other text'}
 			onClick={onOpen}
 			onKeyDown={(event) => {
@@ -149,8 +158,10 @@ function BoxDialog({ box, onClose }: {
 	);
 }
 
-// The page with its boxes drawn over it, in the page image's own pixels
-function PageImage({ page }: { page: Page }) {
+// The page with its boxes drawn over it, in the page image's own pixels,
+// each Manchu box coloured by how it compares with the expected Abkai
+function PageImage({ page, expected }: { page: Page; expected: string }) {
+	const statuses = boxStatuses(page.boxes, expected);
 	const [size, setSize] = useState<{ image: string; w: number; h: number }>();
 	const [open, setOpen] = useState<PageBox>();
 	useEffect(() => {
@@ -173,11 +184,16 @@ function PageImage({ page }: { page: Page }) {
 				height={size.h}
 				viewBox={`0 0 ${size.w} ${size.h}`}
 				role="group"
-				aria-label="The page, with each Manchu word outlined in green and labelled with its reading (yellow if read with low confidence), and other text outlined in red. Select a box to see it closer."
+				aria-label="The page, with each word outlined as the caption describes. Select a box to see it closer."
 			>
 				<image href={page.image} width={size.w} height={size.h} />
 				{page.boxes.map((box, key) => (
-					<BoxOutline key={key} box={box} onOpen={() => { setOpen(box); }} />
+					<BoxOutline
+						key={key}
+						box={box}
+						status={statuses[key]}
+						onOpen={() => { setOpen(box); }}
+					/>
 				))}
 			</svg>
 			<BoxDialog box={open} onClose={() => { setOpen(undefined); }} />
@@ -196,15 +212,17 @@ export default function PageResult({ page, expected = '' }: {
 	const random = 'transcription' in page ? page : undefined;
 	const angle = describeAngle(page.angle);
 	const found = page.boxes.some(({ kind }) => kind === 'manchu');
+	// Whether there's any text to compare the reading with
+	const compared = pageWords(expected).length > 0;
 
 	return (
 		<section className={styles.page}>
 			<h3>Page</h3>
 			<div className={styles.reading}>
 			<figure className={styles.marked}>
-				<PageImage page={page} />
+				<PageImage page={page} expected={expected} />
 				<figcaption>
-					{`Read by ${page.model}. Manchu words are outlined in green and labelled with their reading, or in yellow if read with too little confidence to include in the text; other text is outlined in red. Click a box to see it closer.`}
+					{`Read by ${page.model}. Manchu words are labelled with their reading and outlined ${compared ? 'in green if read right or red if read wrong' : 'in blue'}, or in yellow if read with too little confidence to include in the text; other text is outlined in grey. Click a box to see it closer.`}
 					{angle && ` ${angle}`}
 					{random?.credit && (
 						<span className={styles.credit}>
