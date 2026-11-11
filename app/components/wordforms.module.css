@@ -74,6 +74,16 @@
 	border-radius: 5px;
 	border: 1px solid grey;
 }
+/* The PDF's page number, in a row */
+.options label.pdfPage {
+	flex-direction: row;
+	align-items: center;
+	gap: .5rem;
+}
+.pdfPage input {
+	width: 5rem;
+	padding: .25rem .5rem;
+}
 .dropZoneActions {
 	display: flex;
 	flex-wrap: wrap;

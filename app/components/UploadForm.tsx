@@ -1,7 +1,9 @@
 'use client'
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 
+import { isPdf, openPdf, renderPage } from './pdf';
+import type { PDFDocumentProxy } from './pdf';
 import styles from './wordforms.module.css';
 
 // Resolves to why an image file can't be uploaded, or undefined if it can
@@ -21,13 +23,14 @@ function checkImage(file: File): Promise<string | undefined> {
 	});
 }
 
-// The first image among a paste's or drop's files, if any
-const firstImage = (files: FileList | null | undefined) => Array.from(files ?? [])
-	.find((file) => file.type.startsWith('image/'));
+// The first image or PDF among a paste's or drop's files, if any
+const firstUsable = (files: FileList | null | undefined) => Array.from(files ?? [])
+	.find((file) => file.type.startsWith('image/') || isPdf(file));
 
-// Picks an image of a page (from the file picker, a drop or a paste) and
-// the Abkai it says, optionally, and hands both to onRead. onError(message) reports a problem with the image, and
-// onError(undefined) clears it.
+// Picks an image of a page, or a page of a PDF (from the file picker, a drop
+// or a paste), and the Abkai it says, optionally, and hands both to onRead.
+// A PDF's page is sent as an image. onError(message) reports a problem with
+// the file, and onError(undefined) clears it.
 export default function UploadForm({
 	hidden = false,
 	disabled = false,
@@ -39,23 +42,86 @@ export default function UploadForm({
 	onRead?: (file: File, label: string) => void;
 	onError?: (message: string | undefined) => void;
 }) {
-	// The user's image once it passes checkImage, and its optional label
+	// The user's image once it passes checkImage (or the PDF's page, once
+	// rendered), and its optional label
 	const [upload, setUpload] = useState<File>();
 	const [uploadLabel, setUploadLabel] = useState('');
 	// An object URL of upload, for its thumbnail
 	const [uploadPreview, setUploadPreview] = useState<string>();
 	// True while a file is dragged over the drop zone
 	const [dragging, setDragging] = useState(false);
+	// The user's PDF, if they picked one, with its file name
+	const [pdf, setPdf] = useState<{ doc: PDFDocumentProxy; name: string }>();
+	// The page number box's text, which may be mid-edit, and true while the
+	// page it names is rendered
+	const [pageInput, setPageInput] = useState('1');
+	const [rendering, setRendering] = useState(false);
+	// The PDF open now, to close when it's replaced. Each new file or page
+	// bumps request, so a slow render that's been overtaken is dropped.
+	const openDoc = useRef<PDFDocumentProxy>(undefined);
+	const request = useRef(0);
 
-	const takeFile = async (file: File | undefined) => {
+	useEffect(() => () => { openDoc.current?.loadingTask.destroy(); }, []);
+
+	const clearUpload = () => {
 		setUpload(undefined);
 		setUploadPreview((previous) => {
 			if (previous) URL.revokeObjectURL(previous);
 			return undefined;
 		});
+	};
+
+	// Renders page number of doc and makes it the upload
+	const showPage = async (doc: PDFDocumentProxy, name: string, number: number) => {
+		const current = ++request.current;
+		clearUpload();
 		onError(undefined);
+		setRendering(true);
+		try {
+			const file = await renderPage(doc, number, name);
+			if (current !== request.current) return;
+			setUpload(file);
+			setUploadPreview(URL.createObjectURL(file));
+		} catch {
+			if (current === request.current) onError(`Couldn't render page ${number} of the PDF.`);
+		} finally {
+			if (current === request.current) setRendering(false);
+		}
+	};
+
+	const takeFile = async (file: File | undefined) => {
+		const current = ++request.current;
+		clearUpload();
+		setRendering(false);
+		onError(undefined);
+		openDoc.current?.loadingTask.destroy();
+		openDoc.current = undefined;
+		setPdf(undefined);
 		if (!file) return;
+		if (isPdf(file)) {
+			setRendering(true);
+			let doc: PDFDocumentProxy;
+			try {
+				doc = await openPdf(file);
+			} catch {
+				if (current === request.current) {
+					setRendering(false);
+					onError('That file isn\'t a PDF that can be read.');
+				}
+				return;
+			}
+			if (current !== request.current) {
+				doc.loadingTask.destroy();
+				return;
+			}
+			openDoc.current = doc;
+			setPdf({ doc, name: file.name });
+			setPageInput('1');
+			showPage(doc, file.name, 1);
+			return;
+		}
 		const problem = await checkImage(file);
+		if (current !== request.current) return;
 		if (problem) {
 			onError(problem);
 			return;
@@ -67,11 +133,11 @@ export default function UploadForm({
 	const onDrop = (event: React.DragEvent) => {
 		event.preventDefault();
 		setDragging(false);
-		const file = firstImage(event.dataTransfer.files);
+		const file = firstUsable(event.dataTransfer.files);
 		if (file) {
 			takeFile(file);
 		} else {
-			onError('That isn\'t an image.');
+			onError('That isn\'t an image or a PDF.');
 		}
 	};
 
@@ -102,7 +168,7 @@ export default function UploadForm({
 	useEffect(() => {
 		if (hidden) return;
 		const onPaste = (event: ClipboardEvent) => {
-			const file = firstImage(event.clipboardData?.files);
+			const file = firstUsable(event.clipboardData?.files);
 			if (!file) return;
 			event.preventDefault();
 			takeFile(file);
@@ -124,7 +190,7 @@ export default function UploadForm({
 		>
 			<div className={styles.inputs}>
 			<div className={styles.field}>
-			<span id="upload-title">Upload an image of a single page</span>
+			<span id="upload-title">Upload an image of a single page, or a PDF</span>
 			<div
 				role="group"
 				aria-labelledby="upload-title"
@@ -139,14 +205,38 @@ export default function UploadForm({
 			>
 				<div className={styles.chosen}>
 					{uploadPreview && <img src={uploadPreview} alt="" />}
-					<span>{upload ? upload.name : 'No image chosen'}</span>
+					<span>
+						{pdf?.name ?? upload?.name ?? 'No file chosen'}
+						{rendering && !pdf && ' (opening…)'}
+					</span>
 				</div>
+				{pdf && (
+					<label className={styles.pdfPage}>
+						Page
+						<input
+							type="number"
+							min={1}
+							max={pdf.doc.numPages}
+							value={pageInput}
+							onChange={(event) => {
+								setPageInput(event.target.value);
+								const number = Number(event.target.value);
+								if (Number.isInteger(number) && number >= 1
+									&& number <= pdf.doc.numPages) {
+									showPage(pdf.doc, pdf.name, number);
+								}
+							}}
+						/>
+						{`of ${pdf.doc.numPages}`}
+						{rendering && <span className={styles.hint}>Rendering…</span>}
+					</label>
+				)}
 				<div className={styles.dropZoneActions}>
 					<label className={styles.chooseButton}>
-						Choose image…
+						Choose file…
 						<input
 							type="file"
-							accept="image/*"
+							accept="image/*,application/pdf,.pdf"
 							className={styles.visuallyHidden}
 							onChange={(event) => {
 								takeFile(event.target.files?.[0]);
