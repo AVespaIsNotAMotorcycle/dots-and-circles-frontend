@@ -27,7 +27,8 @@
 
 .grid {
 	display: grid;
-	grid-template-columns: repeat(auto-fill, minmax(9rem, 1fr));
+	/* Wide enough for the longest words (14 letters) on one line */
+	grid-template-columns: repeat(auto-fill, minmax(min(15rem, 100%), 1fr));
 	gap: .75rem;
 }
 
@@ -55,7 +56,8 @@
 	align-items: flex-start;
 	gap: .25rem;
 	min-width: 0;
-	overflow-wrap: anywhere;
+	/* Breaks a word only if it can't fit on a line of its own */
+	overflow-wrap: break-word;
 }
 .caption {
 	color: grey;
@@ -92,6 +94,7 @@
 	border-radius: 5px;
 	font-size: .875rem;
 	font-weight: 800;
+	white-space: nowrap;
 }
 .score.right {
 	color: green;
