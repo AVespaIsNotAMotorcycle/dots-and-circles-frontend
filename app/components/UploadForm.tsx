@@ -118,7 +118,7 @@ export default function UploadForm({
 
 	return (
 		<form
-			className={`${styles.options} ${styles.page}`}
+			className={styles.options}
 			hidden={hidden}
 			onSubmit={onSubmit}
 		>

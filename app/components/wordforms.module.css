@@ -1,50 +1,48 @@
-/* UploadForm's layout */
+/* UploadForm: the image and the Abkai side by side across the whole width,
+   with the button centred below them */
 .options {
 	display: flex;
-	flex-direction: row;
-	flex-wrap: wrap;
-	align-items: flex-end;
+	flex-direction: column;
+	align-items: stretch;
 	gap: 1rem;
+	width: 100%;
 }
 /* display: flex would otherwise override the hidden attribute */
 .options[hidden] {
 	display: none;
 }
-/* The button goes below the inputs */
-.options.page {
-	flex-direction: column;
-	align-items: flex-start;
-}
-.options.page .inputs {
-	display: flex;
-	flex-wrap: wrap;
-	align-items: flex-end;
+.inputs {
+	display: grid;
+	grid-template-columns: repeat(2, minmax(0, 1fr));
 	gap: 1rem;
+}
+/* One above the other when there isn't room for both */
+@media (max-width: 639.98px) {
+	.inputs {
+		grid-template-columns: minmax(0, 1fr);
+	}
 }
 .options label {
 	display: flex;
 	flex-direction: column;
 	gap: .25rem;
 }
-/* Browsers size a select differently from a button with the same padding,
-   so both get an explicit height to line up side by side */
-.options select,
-.options > button {
-	box-sizing: border-box;
-	height: 2.75rem;
-	line-height: 1.5rem;
+.options > button[type="submit"] {
+	align-self: center;
 }
 .options input {
 	/* Undo the global text-input sizing */
 	margin: 0;
 }
+/* As tall as the image's box beside it */
 .options textarea {
-	width: min(24rem, 80svw);
+	flex-grow: 1;
+	width: 100%;
+	min-height: 6rem;
 	border: 2px solid var(--color-foreground);
 	padding: 0.5rem;
 	border-radius: 5px;
-	resize: both;
-	max-width: 80svw;
+	resize: vertical;
 }
 .dropZone {
 	display: flex;
