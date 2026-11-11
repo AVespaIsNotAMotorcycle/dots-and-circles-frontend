@@ -1,38 +1,36 @@
 // The backend's JSON, as documented in dots-and-circles' server/README.md
 
-// Where GET /random picks its word from
+// The sets of test words GET /lexigraphs lists
 export type Source = 'photo' | 'synthetic';
 
-// The most likely class at each image token: a letter, or null for the blank
-export type Ctc = (string | null)[];
-
-// One model's reading of a word
-export type ModelResult = {
-	// Short and long names of the model
-	name: string;
-	model: string;
+// One test word with a model's reading of it, from GET /lexigraphs
+export type Lexigraph = {
+	// Its place in the whole list
+	index: number;
+	// The word in Abkai and in Manchu script
+	label: string;
+	manchu: string;
+	// The font a synthetic word was rendered in, null for a photo
+	font: string | null;
+	// The image, as a data: URL
+	image: string;
 	'prediction-manchu': string;
 	'prediction-abkai': string;
-	ctc: Ctc;
-	// The probability of each token's class in ctc
-	probs: number[];
-	// Character accuracy against the label, or null without one
-	score: number | null;
+	// Character accuracy against the label, from 0 to 1
+	score: number;
 };
 
-// A word read by every model: GET /random or POST /upload/single
-export type Word = {
-	source: Source | 'upload';
-	// The font a synthetic word was rendered in, null otherwise
-	font: string | null;
-	// The word in Abkai and in Manchu script. Both are null for an upload
-	// without a label.
-	label: string | null;
-	manchu: string | null;
-	// The image before and after the default preprocessing, as data: URLs
-	image: string;
-	'preprocessed-image': string;
-	results: ModelResult[];
+// A page of GET /lexigraphs
+export type LexigraphPage = {
+	source: Source;
+	// The name of the model that read them
+	model: string;
+	page: number;
+	'per-page': number;
+	// Words and pages in the whole list
+	total: number;
+	pages: number;
+	words: Lexigraph[];
 };
 
 // The body of a failed request

@@ -104,8 +104,22 @@ header nav a {
 	text-decoration: none;
 }
 header nav a:hover,
-header nav a:hover {
+header nav a[aria-current="page"] {
 	border-color: black;
+}
+/* The link off the site sits apart, on the right */
+header nav li.github {
+	margin-left: auto;
+}
+@media (max-width: 479.98px) {
+	header {
+		padding: 1rem;
+		font-size: 1.125rem;
+		margin-bottom: 1rem;
+	}
+	header nav ul {
+		gap: 1rem;
+	}
 }
 
 body {

@@ -4,26 +4,14 @@ import { useState, useEffect } from 'react';
 
 import styles from './wordforms.module.css';
 
-// Words are written top to bottom, and the models read them at 32 pixels wide
-// and squash anything over 256 tall, so taller than 1:8 is refused
-const MAX_HEIGHT_PER_WIDTH = 8;
-
-// Resolves to why an image file can't be uploaded, or undefined if it can.
-// A page can be any shape; a single word can't be taller than 1:8.
-// The browser applies EXIF orientation as the server does, so the
-// dimensions match what the server sees.
-function checkImage(file: File, page: boolean): Promise<string | undefined> {
+// Resolves to why an image file can't be uploaded, or undefined if it can
+function checkImage(file: File): Promise<string | undefined> {
 	return new Promise((resolve) => {
 		const url = URL.createObjectURL(file);
 		const image = new Image();
 		image.onload = () => {
 			URL.revokeObjectURL(url);
-			const { naturalWidth: width, naturalHeight: height } = image;
-			if (!page && height > width * MAX_HEIGHT_PER_WIDTH) {
-				resolve(`The image is ${width}×${height}, taller than 1:${MAX_HEIGHT_PER_WIDTH}. Crop it closer to the word.`);
-			} else {
-				resolve(undefined);
-			}
+			resolve(undefined);
 		};
 		image.onerror = () => {
 			URL.revokeObjectURL(url);
@@ -37,20 +25,17 @@ function checkImage(file: File, page: boolean): Promise<string | undefined> {
 const firstImage = (files: FileList | null | undefined) => Array.from(files ?? [])
 	.find((file) => file.type.startsWith('image/'));
 
-// Picks an image of one word, or with page set of a whole page (from the
-// file picker, a drop or a paste), and an optional Abkai label, and hands
-// both to onRead. onError(message) reports a problem with the image, and
+// Picks an image of a page (from the file picker, a drop or a paste) and
+// the Abkai it says, optionally, and hands both to onRead. onError(message) reports a problem with the image, and
 // onError(undefined) clears it.
 export default function UploadForm({
 	hidden = false,
 	disabled = false,
-	page = false,
 	onRead = () => {},
 	onError = () => {},
 }: {
 	hidden?: boolean;
 	disabled?: boolean;
-	page?: boolean;
 	onRead?: (file: File, label: string) => void;
 	onError?: (message: string | undefined) => void;
 }) {
@@ -70,7 +55,7 @@ export default function UploadForm({
 		});
 		onError(undefined);
 		if (!file) return;
-		const problem = await checkImage(file, page);
+		const problem = await checkImage(file);
 		if (problem) {
 			onError(problem);
 			return;
@@ -133,11 +118,10 @@ export default function UploadForm({
 
 	return (
 		<form
-			className={[styles.options, page && styles.page].filter(Boolean).join(' ')}
+			className={`${styles.options} ${styles.page}`}
 			hidden={hidden}
 			onSubmit={onSubmit}
 		>
-			{/* The page form puts its button below these */}
 			<div className={styles.inputs}>
 			<div
 				className={[styles.dropZone, dragging && styles.dragging]
@@ -150,9 +134,7 @@ export default function UploadForm({
 				onDrop={onDrop}
 			>
 				<span className={styles.dropZoneTitle}>
-					{page
-						? 'Upload an image of a single page'
-						: 'Your image of one word, written top to bottom'}
+					Upload an image of a single page
 				</span>
 				<div className={styles.chosen}>
 					{uploadPreview && <img src={uploadPreview} alt="" />}
@@ -180,31 +162,19 @@ export default function UploadForm({
 					or drag one here, or press Ctrl+V (⌘V on a Mac)
 				</span>
 			</div>
-			{page ? (
-				<label>
-					What it says, in Abkai (optional): a line per column, words
-					separated by spaces
-					<textarea
-						value={uploadLabel}
-						rows={4}
-						placeholder={'abka na\nbe'}
-						onChange={(event) => { setUploadLabel(event.target.value); }}
-					/>
-				</label>
-			) : (
-				<label>
-					What it says, in Abkai (optional)
-					<input
-						type="text"
-						value={uploadLabel}
-						placeholder="abka"
-						onChange={(event) => { setUploadLabel(event.target.value); }}
-					/>
-				</label>
-			)}
+			<label>
+				What it says, in Abkai (optional): a line per column, words
+				separated by spaces
+				<textarea
+					value={uploadLabel}
+					rows={4}
+					placeholder={'abka na\nbe'}
+					onChange={(event) => { setUploadLabel(event.target.value); }}
+				/>
+			</label>
 			</div>
 			<button type="submit" disabled={disabled || !upload}>
-				{page ? 'Read My Page' : 'Read My Image'}
+				Read My Page
 			</button>
 		</form>
 	);

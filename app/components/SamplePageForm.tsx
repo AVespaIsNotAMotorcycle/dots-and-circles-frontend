@@ -4,15 +4,13 @@ import { useState } from 'react';
 
 import styles from './wordforms.module.css';
 
-// Picks one of the sample pages by name, or any one ('') at random, and asks
-// for it with onLoad(name)
+// A small option to load one of the sample pages by name, or any one ('')
+// at random, instead of uploading: asks for it with onLoad(name)
 export default function SamplePageForm({
-	hidden = false,
 	disabled = false,
 	names = [],
 	onLoad = () => {},
 }: {
-	hidden?: boolean;
 	disabled?: boolean;
 	// The pages GET /pages lists
 	names?: string[];
@@ -21,11 +19,12 @@ export default function SamplePageForm({
 	const [name, setName] = useState('');
 
 	return (
-		<div className={styles.options} hidden={hidden}>
+		<div className={styles.sample}>
 			<label>
-				Page
+				<span>No page to hand? Try a sample:</span>
 				<select
 					value={name}
+					aria-label="Sample page"
 					onChange={(event) => { setName(event.target.value); }}
 				>
 					<option value="">Any page, at random</option>
@@ -39,7 +38,7 @@ export default function SamplePageForm({
 				disabled={disabled}
 				onClick={() => { onLoad(name); }}
 			>
-				{name ? 'Load Page' : 'Load Random Page'}
+				{name ? 'Load sample' : 'Load a random sample'}
 			</button>
 		</div>
 	);

@@ -1,0 +1,108 @@
+.testWords {
+	display: flex;
+	flex-direction: column;
+	gap: 1rem;
+	margin-top: 1rem;
+}
+
+.controls {
+	display: flex;
+	flex-direction: column;
+	align-items: flex-start;
+	gap: .5rem;
+}
+.controls p {
+	color: grey;
+}
+
+.summary p + p {
+	margin-top: 0;
+}
+.legend {
+	color: grey;
+}
+.error {
+	color: red;
+}
+
+.grid {
+	display: grid;
+	grid-template-columns: repeat(auto-fill, minmax(9rem, 1fr));
+	gap: .75rem;
+}
+
+.card {
+	display: flex;
+	gap: .75rem;
+	align-items: flex-start;
+	padding: .5rem;
+	border: 1px solid grey;
+	border-radius: 5px;
+	min-width: 0;
+}
+/* Words are written top to bottom, so the images are tall */
+.card img {
+	height: 9rem;
+	max-width: 4rem;
+	object-fit: contain;
+	object-position: top;
+	flex-shrink: 0;
+}
+
+.text {
+	display: flex;
+	flex-direction: column;
+	align-items: flex-start;
+	gap: .25rem;
+	min-width: 0;
+	overflow-wrap: anywhere;
+}
+.caption {
+	color: grey;
+	font-size: .75rem;
+	line-height: 1;
+}
+.caption ~ .caption {
+	margin-top: .25rem;
+}
+.label {
+	font-weight: 800;
+}
+.reading {
+	font-weight: 800;
+	display: flex;
+	flex-wrap: wrap;
+	column-gap: .3em;
+}
+.wrong, .extra {
+	color: red;
+}
+.extra {
+	text-decoration: underline wavy red;
+	text-decoration-thickness: 2px;
+}
+.missing {
+	opacity: .3;
+}
+
+.score {
+	margin-top: .25rem;
+	padding: 0 .5rem;
+	border: 2px solid;
+	border-radius: 5px;
+	font-size: .875rem;
+	font-weight: 800;
+}
+.score.right {
+	color: green;
+	border-color: green;
+}
+.score.miss {
+	color: red;
+	border-color: red;
+}
+
+.font {
+	color: grey;
+	font-size: .75rem;
+}

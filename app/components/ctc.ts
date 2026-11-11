@@ -1,11 +1,6 @@
-// Helpers for reading a model's CTC output: `ctc` has one entry per image
-// token, holding the most likely letter or null for the blank.
+// Lines a predicted word up with the true one, letter by letter
 
 import { INVISIBLE } from './romanization';
-import type { Ctc } from './types';
-
-// An RGB color, each channel 0-255
-export type Rgb = [number, number, number];
 
 // One letter of a predicted word lined up against the true word (see
 // diffLetters)
@@ -15,41 +10,6 @@ export type DiffLetter = {
 	index: number;
 	status: 'ok' | 'wrong' | 'extra' | 'missing';
 };
-
-const LETTER_COLORS: Rgb[] = [
-	[25, 25, 112],
-	[255, 69, 0],
-	[255, 215, 0],
-	[0, 255, 127],
-	[0, 191, 255],
-	[0, 0, 255],
-	[255, 20, 147],
-];
-export const BLANK_COLOR: Rgb = [128, 128, 128];
-// Every letter token's color in the quiet view, before anyone interacts
-export const QUIET_COLOR: Rgb = [70, 130, 180];
-
-// CTC decoding collapses runs of the same token and drops blanks, so each
-// new run of a non-blank token adds one letter to the decoded word. Blank
-// tokens don't map to any letter and return -1.
-export function tokenToLetterIndex(
-	ctc: Ctc, tokenIndex: number | undefined,
-): number {
-	if (tokenIndex === undefined) return -1;
-	if (!ctc[tokenIndex]) return -1;
-	let letterIndex = -1;
-	for (let i = 0; i <= tokenIndex; i++) {
-		const startsNewLetter = ctc[i] && ctc[i] !== ctc[i - 1];
-		if (startsNewLetter) letterIndex++;
-	}
-	return letterIndex;
-}
-
-// Colors cycle by position in the word, so neighboring letters always differ
-export function letterColor(letterIndex: number): Rgb {
-	if (letterIndex < 0) return BLANK_COLOR;
-	return LETTER_COLORS[letterIndex % LETTER_COLORS.length];
-}
 
 // Lines up a predicted word with the true one by edit distance, letter by
 // letter. Returns the predicted letters in order, with the true letters the
