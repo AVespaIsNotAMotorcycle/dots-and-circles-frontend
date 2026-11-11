@@ -58,6 +58,9 @@ export type PageBox = {
 	'prediction-manchu': string | null;
 	'prediction-abkai': string | null;
 	confidence: number | null;
+	// True for Manchu read with too little confidence to be in the page's
+	// text, null for other boxes
+	'low-confidence': boolean | null;
 };
 
 // A page read by one model: POST /upload/multiple

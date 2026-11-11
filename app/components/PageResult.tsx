@@ -51,19 +51,24 @@ function Comparison({ abkai, expected, score }: {
 }
 
 // One box on the page: green with its Abkai reading written down it for
-// Manchu, red for other text. Clicking it (or Enter or Space) calls onOpen.
+// Manchu, yellow for Manchu read with too little confidence to be in the
+// text, red for other text. Clicking it (or Enter or Space) calls onOpen.
 function BoxOutline({ box, onOpen }: { box: PageBox; onOpen: () => void }) {
 	const manchu = box.kind === 'manchu';
+	const unsure = manchu && Boolean(box['low-confidence']);
 	const reading = box['prediction-abkai'] ?? '';
 	// Written top to bottom, as wide as the box allows, but no longer than it
 	const fontSize = Math.min(box.w * 0.6,
 		(box.h * 0.9) / Math.max(reading.length * 0.6, 1));
 	return (
 		<g
-			className={manchu ? styles.manchuBox : styles.otherBox}
+			className={[manchu ? styles.manchuBox : styles.otherBox,
+				unsure && styles.lowConfidence].filter(Boolean).join(' ')}
 			role="button"
 			tabIndex={0}
-			aria-label={manchu ? `Manchu word read as ${reading}` : 'Other text'}
+			aria-label={manchu
+				? `Manchu word read as ${reading}${unsure ? ', with low confidence' : ''}`
+				: 'Other text'}
 			onClick={onOpen}
 			onKeyDown={(event) => {
 				if (event.key !== 'Enter' && event.key !== ' ') return;
@@ -121,6 +126,12 @@ function BoxDialog({ box, onClose }: {
 										{`Confidence: ${percent(box.confidence)}`}
 									</p>
 								)}
+								{box['low-confidence'] && (
+									<p className={styles.lowConfidenceNote}>
+										Low confidence, so this reading is left out of the page&apos;s
+										text.
+									</p>
+								)}
 							</>
 						) : (
 							<>
@@ -162,7 +173,7 @@ function PageImage({ page }: { page: Page }) {
 				height={size.h}
 				viewBox={`0 0 ${size.w} ${size.h}`}
 				role="group"
-				aria-label="The page, with each Manchu word outlined in green and labelled with its reading, and other text outlined in red. Select a box to see it closer."
+				aria-label="The page, with each Manchu word outlined in green and labelled with its reading (yellow if read with low confidence), and other text outlined in red. Select a box to see it closer."
 			>
 				<image href={page.image} width={size.w} height={size.h} />
 				{page.boxes.map((box, key) => (
@@ -193,7 +204,7 @@ export default function PageResult({ page, expected = '' }: {
 			<figure className={styles.marked}>
 				<PageImage page={page} />
 				<figcaption>
-					{`Read by ${page.model}. Manchu words are outlined in green and labelled with their reading; other text is outlined in red. Click a box to see it closer.`}
+					{`Read by ${page.model}. Manchu words are outlined in green and labelled with their reading, or in yellow if read with too little confidence to include in the text; other text is outlined in red. Click a box to see it closer.`}
 					{angle && ` ${angle}`}
 					{random?.credit && (
 						<span className={styles.credit}>

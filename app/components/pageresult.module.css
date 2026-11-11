@@ -48,6 +48,13 @@
 	stroke: green;
 	fill: rgba(255, 255, 255, .55);
 }
+/* Manchu left out of the text for low confidence */
+.manchuBox.lowConfidence rect {
+	stroke: #e6b800;
+}
+.manchuBox.lowConfidence text {
+	fill: #8a6d00;
+}
 .otherBox rect {
 	stroke: red;
 	fill: transparent;
@@ -104,6 +111,10 @@
 }
 .dialogText p + p {
 	margin-top: 0;
+}
+.lowConfidenceNote {
+	border-left: 4px solid #e6b800;
+	padding-left: .5rem;
 }
 .dialogManchu {
 	font-family: manchu0;
