@@ -164,16 +164,22 @@ export default function UploadForm({
 				</span>
 			</div>
 			</div>
-			<label>
-				What it says, in Abkai (optional): a line per column, words
-				separated by spaces
+			<div className={styles.field}>
+				<label htmlFor="upload-abkai">
+					[Optional] Abkai transcription for comparison:
+				</label>
+				<span id="upload-abkai-hint" className={styles.hint}>
+					A line per column, words separated by spaces.
+				</span>
 				<textarea
+					id="upload-abkai"
+					aria-describedby="upload-abkai-hint"
 					value={uploadLabel}
 					rows={4}
 					placeholder={'abka na\nbe'}
 					onChange={(event) => { setUploadLabel(event.target.value); }}
 				/>
-			</label>
+			</div>
 			</div>
 			<button type="submit" disabled={disabled || !upload}>
 				Read My Page
