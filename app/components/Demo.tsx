@@ -48,7 +48,7 @@ export default function Demo({ backendAwake = false }: {
 	>({});
 	// false, or the LoadingCard message to show
 	const [loading, setLoading] = useState<LoadingMessage | false>(false);
-	const [mode, setMode] = useState<Mode>('random');
+	const [mode, setMode] = useState<Mode>('randomPage');
 	const page = isPageMode(mode) ? pages[mode] : undefined;
 	// { mode, message }: shown only under the mode it came from
 	const [error, setError] = useState<{ mode: Mode; message: string }>();
@@ -128,22 +128,29 @@ export default function Demo({ backendAwake = false }: {
 			});
 	};
 
+	// A random page is on show as soon as the server is awake
 	useEffect(() => {
 		if (!backendAwake) return;
-		load();
+		loadPage();
 	}, [backendAwake]);
 
 	const busy = !backendAwake || Boolean(loading);
+
+	// The first switch to Random word loads one, so it isn't empty
+	const changeMode = (next: Mode) => {
+		setMode(next);
+		if (next === 'random' && !word && !busy) load();
+	};
 
 	return (
 		<section className={styles.demo}>
 			<h2>Demo</h2>
 			<div className={styles.form}>
 				<Switch
-					label="Word to read"
+					label="What to read"
 					options={MODES}
 					value={mode}
-					onChange={setMode}
+					onChange={changeMode}
 				/>
 				{/* Hidden rather than removed, so a picked file survives a switch */}
 				<RandomWordForm
