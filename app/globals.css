@@ -128,14 +128,18 @@ body {
   font-family: Arial, Helvetica, sans-serif;
 }
 
+/* As wide as the header's nav, with the same gutters as the header */
 main {
-	margin: 2rem 1rem;
-	padding: 0 1rem;
+	width: 100%;
+	max-width: calc(80rem + 4rem);
+	margin: 2rem auto;
+	padding: 0 2rem;
 }
-/* Narrower gutters on phones, to leave room for the prediction cards */
+/* Narrower gutters on phones, to leave room for the page */
 @media (max-width: 479.98px) {
 	main {
-		margin: 1rem 0;
+		margin: 1rem auto;
+		padding: 0 1rem;
 	}
 }
 
