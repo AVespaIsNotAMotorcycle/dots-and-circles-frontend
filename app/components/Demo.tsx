@@ -6,6 +6,7 @@ import { useState, useEffect } from 'react';
 
 import styles from './demo.module.css';
 import LoadingCard from './LoadingCard';
+import PageResult from './PageResult';
 import type { LoadingMessage } from './LoadingCard';
 import PredictionCard from './PredictionCard';
 import RandomWordForm from './RandomWordForm';
@@ -14,15 +15,16 @@ import type { Romanization } from './romanization';
 import Switch from './Switch';
 import UploadForm from './UploadForm';
 import useTokenHighlight from './useTokenHighlight';
-import type { ErrorResponse, Source, Word } from './types';
+import type { ErrorResponse, Page, Source, Word } from './types';
 
 const BACKEND = process.env.NEXT_PUBLIC_BACKEND
 
 // Which form shows
-type Mode = 'random' | 'upload';
+type Mode = 'random' | 'upload' | 'page';
 const MODES: [Mode, string][] = [
 	['random', 'Random word'],
 	['upload', 'Your image'],
+	['page', 'Your page'],
 ];
 const ROMANIZATIONS = Object.entries(ROMANIZATION_NAMES) as
 	[Romanization, string][];
@@ -33,6 +35,9 @@ export default function Demo({ backendAwake = false }: {
 	// The word on show: the backend's /random or /upload/single response
 	const [word, setWord] = useState<Word>();
 	const results = word?.results ?? [];
+	// The page on show: the backend's /upload/multiple response, and the
+	// Abkai the user expected it to say ('' if they didn't say)
+	const [page, setPage] = useState<{ result: Page; expected: string }>();
 	// false, or the LoadingCard message to show
 	const [loading, setLoading] = useState<LoadingMessage | false>(false);
 	const [mode, setMode] = useState<Mode>('random');
@@ -46,21 +51,23 @@ export default function Demo({ backendAwake = false }: {
 		: word?.manchu && romanize(word.manchu, romanization);
 
 	// Runs a backend request for a new word: shows loadingMessage meanwhile,
-	// then the word, or the server's {"error": ...} (or fallback) under
+	// then the word (or page), or the server's {"error": ...} (or fallback) under
 	// errorMode's form
-	const request = (
+	// and hands the response to onData
+	const request = <T,>(
 		errorMode: Mode,
 		loadingMessage: LoadingMessage,
-		send: () => Promise<AxiosResponse<Word>>,
+		send: () => Promise<AxiosResponse<T>>,
 		fallback: string,
+		onData: (data: T) => void = (data) => {
+			setWord(data as Word);
+			highlight.reset();
+		},
 	) => {
 		setLoading(loadingMessage);
 		setError(undefined);
 		send()
-			.then(({ data }) => {
-				setWord(data);
-				highlight.reset();
-			})
+			.then(({ data }) => { onData(data); })
 			.catch((error) => {
 				setError({
 					mode: errorMode,
@@ -84,6 +91,17 @@ export default function Demo({ backendAwake = false }: {
 		request('upload', 'readingUpload',
 			() => axios.post<Word>(`${BACKEND}/upload/single`, body),
 			'Couldn\'t read the image.');
+	};
+
+	// The server ignores a label for a page, so the comparison with the
+	// expected Abkai is made here
+	const readPage = (file: File, expected: string) => {
+		const body = new FormData();
+		body.append('image', file);
+		request('page', 'readingPage',
+			() => axios.post<Page>(`${BACKEND}/upload/multiple`, body),
+			'Couldn\'t read the page.',
+			(result) => { setPage({ result, expected }); });
 	};
 
 	useEffect(() => {
@@ -117,6 +135,15 @@ export default function Demo({ backendAwake = false }: {
 						setError(message ? { mode: 'upload', message } : undefined);
 					}}
 				/>
+				<UploadForm
+					page
+					hidden={mode !== 'page'}
+					disabled={busy}
+					onRead={readPage}
+					onError={(message) => {
+						setError(message ? { mode: 'page', message } : undefined);
+					}}
+				/>
 				<LoadingCard
 					loading={Boolean(loading) || !backendAwake}
 					message={backendAwake && loading ? loading : 'wakingServer'}
@@ -125,6 +152,9 @@ export default function Demo({ backendAwake = false }: {
 					<p className={styles.error} role="alert">{error.message}</p>
 				)}
 			</div>
+			{mode === 'page' ? (
+				page && <PageResult page={page.result} expected={page.expected} />
+			) : (<>
 			<section className={styles.lexigraph}>
 				<h3>Lexigraph</h3>
 				<figure>
@@ -204,6 +234,7 @@ export default function Demo({ backendAwake = false }: {
 					))}
 				</div>
 			</section>
+			</>)}
 		</section>
 	);
 }

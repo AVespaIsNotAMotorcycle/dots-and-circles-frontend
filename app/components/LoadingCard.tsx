@@ -1,12 +1,13 @@
 import styles from './loadingcard.module.css';
 
 export type LoadingMessage = 'wakingServer' | 'loadingPredictions'
-	| 'readingUpload';
+	| 'readingUpload' | 'readingPage';
 
 const MESSAGES: Record<LoadingMessage, string> = {
 	wakingServer: 'Waking up the server...',
 	loadingPredictions: 'Loading lexigraph and model predictions...',
 	readingUpload: 'Reading your image...',
+	readingPage: 'Reading your page...',
 };
 
 export default function LoadingCard({

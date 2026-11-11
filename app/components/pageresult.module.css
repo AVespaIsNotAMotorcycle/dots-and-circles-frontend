@@ -1,0 +1,86 @@
+.page {
+	grid-column: 1 / -1;
+	display: flex;
+	flex-direction: column;
+	gap: 1rem;
+	min-width: 0;
+}
+.page h3 {
+	margin-bottom: 0;
+}
+.page h4 {
+	font-weight: 800;
+	margin-bottom: .5rem;
+}
+
+.marked img {
+	max-width: 100%;
+	max-height: 80svh;
+	border-radius: 5px;
+	border: 1px solid grey;
+}
+.marked figcaption {
+	margin-top: .5rem;
+	color: grey;
+}
+
+.texts {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 2rem;
+}
+.texts > section {
+	min-width: 0;
+	max-width: 100%;
+}
+
+/* Each line of the text is a column of the page, read left to right */
+.manchu {
+	font-family: manchu0;
+	font-size: 2rem;
+	writing-mode: vertical-lr;
+	white-space: pre-line;
+	max-height: 70svh;
+	max-width: 100%;
+	overflow-x: auto;
+}
+.abkai {
+	font-weight: 800;
+	white-space: pre-line;
+	overflow-wrap: anywhere;
+}
+.hint {
+	color: grey;
+	font-size: .875rem;
+}
+
+.comparison {
+	display: flex;
+	flex-direction: column;
+	align-items: flex-start;
+	gap: 1rem;
+}
+.comparison p + p {
+	margin-top: 0;
+}
+.diff {
+	font-weight: 800;
+	display: flex;
+	flex-wrap: wrap;
+	column-gap: .5em;
+	row-gap: .25rem;
+}
+.wrong, .extra {
+	color: red;
+}
+.extra {
+	text-decoration: underline wavy red;
+	text-decoration-thickness: 2px;
+}
+.missing {
+	opacity: .3;
+}
+.expected {
+	color: grey;
+	font-weight: normal;
+}

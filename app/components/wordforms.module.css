@@ -30,6 +30,12 @@
 .options input[type="text"] {
 	width: 12rem;
 }
+.options textarea {
+	width: min(24rem, 80svw);
+	border: 2px solid var(--color-foreground);
+	padding: 0.5rem;
+	border-radius: 5px;
+}
 .dropZone {
 	display: flex;
 	flex-direction: column;

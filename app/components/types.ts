@@ -37,3 +37,39 @@ export type Word = {
 
 // The body of a failed request
 export type ErrorResponse = { error: string };
+
+// One box found on a page by POST /upload/multiple
+export type PageBox = {
+	// Where it is in the page's (deskewed) image, in pixels
+	x: number;
+	y: number;
+	w: number;
+	h: number;
+	// Its line of the page's text, or null if its column has no Manchu
+	line: number | null;
+	// Its place in its column, counting from the top
+	position: number;
+	kind: 'manchu' | 'other';
+	// The classifier's probability that the box is Manchu
+	'manchu-probability': number;
+	// The model's reading, null for other boxes
+	'prediction-manchu': string | null;
+	'prediction-abkai': string | null;
+	confidence: number | null;
+};
+
+// A page read by one model: POST /upload/multiple
+export type Page = {
+	// The name of the model that read it
+	model: string;
+	// The page, deskewed and with its boxes drawn on, as a data: URL
+	image: string;
+	// How far the page was turned anticlockwise to straighten it, in degrees
+	angle: number;
+	// The text, a line per column with Manchu in it, words separated by
+	// spaces and □ for each box of other text
+	manchu: string;
+	abkai: string;
+	// In reading order
+	boxes: PageBox[];
+};
