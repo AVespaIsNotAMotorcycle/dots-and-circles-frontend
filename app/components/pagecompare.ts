@@ -148,3 +148,11 @@ export function textForPage(text: string, number: number, wholePdf: boolean) {
 	if (!wholePdf && pages.length === 1) return pages[0];
 	return pages[number - 1] ?? '';
 }
+
+// How many of the expected words a reading got right, out of how many
+export function wordsRight(abkai: string, expected: string) {
+	const truth = pageWords(expected);
+	const right = alignWords(pageWords(abkai), truth)
+		.filter(({ status }) => status === 'right').length;
+	return { right, total: truth.length };
+}

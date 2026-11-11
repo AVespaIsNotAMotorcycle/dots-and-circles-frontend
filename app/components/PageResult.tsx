@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 
-import { alignWords, boxStatuses, pageWords, wordLetters } from './pagecompare';
+import { alignWords, boxStatuses, pageWords, wordLetters, wordsRight } from './pagecompare';
 import type { Page, PageBox, SamplePage } from './types';
 import styles from './pageresult.module.css';
 
@@ -22,10 +22,8 @@ function Comparison({ abkai, expected, score }: {
 	expected: string;
 	score?: SamplePage['score'];
 }) {
-	const predicted = pageWords(abkai);
-	const truth = pageWords(expected);
-	const aligned = alignWords(predicted, truth);
-	const right = aligned.filter(({ status }) => status === 'right').length;
+	const aligned = alignWords(pageWords(abkai), pageWords(expected));
+	const { right, total } = wordsRight(abkai, expected);
 
 	return (
 		<section className={styles.comparison}>
@@ -33,7 +31,7 @@ function Comparison({ abkai, expected, score }: {
 			<p>
 				{score
 					? `${percent(score.characters)} of letters and ${percent(score.words)} of words right, matching each line of the transcription to the closest line read, without punctuation. `
-					: `${right} of ${truth.length} words right. `}
+					: `${right} of ${total} words right. `}
 				Red letters are wrong, letters with a wavy line are extra, and faint
 				letters are missing.
 			</p>
@@ -205,11 +203,13 @@ function PageImage({ page, expected }: { page: Page; expected: string }) {
 // with its boxes drawn over it, its text in Manchu and Abkai, and how that
 // compares with the Abkai expected (the user's, or a sample page's
 // transcription)
-export default function PageResult({ page, expected = '', title = 'Page' }: {
+export default function PageResult({ page, expected = '', title = 'Page', id }: {
 	page: Page | SamplePage;
 	expected?: string;
 	// Its heading, e.g. a PDF's page number
 	title?: string;
+	// Its element id, for links to it
+	id?: string;
 }) {
 	const random = 'transcription' in page ? page : undefined;
 	const angle = describeAngle(page.angle);
@@ -218,7 +218,7 @@ export default function PageResult({ page, expected = '', title = 'Page' }: {
 	const compared = pageWords(expected).length > 0;
 
 	return (
-		<section className={styles.page}>
+		<section className={styles.page} id={id}>
 			<h3>{title}</h3>
 			<div className={styles.reading}>
 			<figure className={styles.marked}>

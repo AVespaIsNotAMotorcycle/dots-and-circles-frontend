@@ -1,0 +1,40 @@
+.summary {
+	display: flex;
+	flex-direction: column;
+	gap: .5rem;
+	padding: 1rem;
+	border: 2px solid var(--color-foreground);
+	border-radius: 5px;
+}
+.summary h3 {
+	margin: 0;
+}
+.summary p + p {
+	margin-top: 0;
+}
+.total strong {
+	font-size: 1.5rem;
+	font-weight: 800;
+}
+.note {
+	color: grey;
+	font-size: .875rem;
+}
+.pages {
+	display: grid;
+	grid-template-columns: repeat(auto-fill, minmax(9rem, 1fr));
+	gap: .25rem 1rem;
+	font-size: .875rem;
+}
+.pages a {
+	display: flex;
+	gap: .5rem;
+	text-decoration: none;
+}
+.pageName {
+	font-weight: 600;
+}
+.pages a:hover .pageName,
+.pages a:focus-visible .pageName {
+	text-decoration: underline;
+}

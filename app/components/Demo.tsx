@@ -8,6 +8,7 @@ import styles from './demo.module.css';
 import LoadingCard from './LoadingCard';
 import type { LoadingMessage } from './LoadingCard';
 import PageResult from './PageResult';
+import PdfSummary from './PdfSummary';
 import SamplePageForm from './SamplePageForm';
 import UploadForm from './UploadForm';
 import type { ErrorResponse, Page, SamplePage } from './types';
@@ -23,6 +24,9 @@ type Reading = {
 	expected: string;
 	error?: string;
 };
+
+// The element id of a PDF's page number (from 1), for links to it
+const pdfPageId = (page: number) => `pdf-page-${page}`;
 
 // The server's {"error": ...} for a failed request, or fallback
 const errorMessage = (error: unknown, fallback: string) => (
@@ -47,6 +51,8 @@ export default function Demo({ backendAwake = false }: {
 	const [loading, setLoading] = useState<LoadingMessage | false>(false);
 	// While a PDF is read: the page being read, out of how many
 	const [progress, setProgress] = useState<{ page: number; pages: number }>();
+	// How many pages the PDF on show has, if the readings are a PDF's
+	const [pdfPages, setPdfPages] = useState<number>();
 	const [error, setError] = useState<string>();
 	// The sample pages' names, from GET /pages
 	const [pageNames, setPageNames] = useState<string[]>([]);
@@ -77,6 +83,7 @@ export default function Demo({ backendAwake = false }: {
 		readingPdf.current = false;
 		setProgress(undefined);
 		setLoading(loadingMessage);
+		setPdfPages(undefined);
 		setError(undefined);
 		inTurn(send)
 			.then(({ data }) => {
@@ -110,6 +117,7 @@ export default function Demo({ backendAwake = false }: {
 		readingPdf.current = true;
 		setError(undefined);
 		setReadings([]);
+		setPdfPages(pages);
 		setLoading('readingPdf');
 		for (let page = 1; page <= pages; page++) {
 			setProgress({ page, pages });
@@ -192,11 +200,26 @@ export default function Demo({ backendAwake = false }: {
 				</LoadingCard>
 				{error && <p className={styles.error} role="alert">{error}</p>}
 			</div>
+			{pdfPages !== undefined && (
+				<PdfSummary readings={readings} pages={pdfPages} pageId={pdfPageId} />
+			)}
 			{readings.map(({ title, result, expected, error: problem }, index) => (
 				result
-					? <PageResult key={index} page={result} expected={expected} title={title} />
+					? (
+						<PageResult
+							key={index}
+							page={result}
+							expected={expected}
+							title={title}
+							id={pdfPages !== undefined ? pdfPageId(index + 1) : undefined}
+						/>
+					)
 					: (
-						<section key={index} className={styles.failedPage}>
+						<section
+							key={index}
+							className={styles.failedPage}
+							id={pdfPages !== undefined ? pdfPageId(index + 1) : undefined}
+						>
 							<h3>{title}</h3>
 							<p className={styles.error}>{problem}</p>
 						</section>
