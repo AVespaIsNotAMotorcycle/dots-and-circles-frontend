@@ -123,7 +123,11 @@ export default function UploadForm({
 			onSubmit={onSubmit}
 		>
 			<div className={styles.inputs}>
+			<div className={styles.field}>
+			<span id="upload-title">Upload an image of a single page</span>
 			<div
+				role="group"
+				aria-labelledby="upload-title"
 				className={[styles.dropZone, dragging && styles.dragging]
 					.filter(Boolean).join(' ')}
 				onDragOver={(event) => {
@@ -133,9 +137,6 @@ export default function UploadForm({
 				onDragLeave={() => { setDragging(false); }}
 				onDrop={onDrop}
 			>
-				<span className={styles.dropZoneTitle}>
-					Upload an image of a single page
-				</span>
 				<div className={styles.chosen}>
 					{uploadPreview && <img src={uploadPreview} alt="" />}
 					<span>{upload ? upload.name : 'No image chosen'}</span>
@@ -161,6 +162,7 @@ export default function UploadForm({
 				<span className={styles.hint}>
 					or drag one here, or press Ctrl+V (⌘V on a Mac)
 				</span>
+			</div>
 			</div>
 			<label>
 				What it says, in Abkai (optional): a line per column, words

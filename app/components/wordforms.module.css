@@ -22,6 +22,8 @@
 		grid-template-columns: minmax(0, 1fr);
 	}
 }
+/* Each input with its title above it */
+.field,
 .options label {
 	display: flex;
 	flex-direction: column;
@@ -45,6 +47,8 @@
 	resize: vertical;
 }
 .dropZone {
+	/* As tall as the text box beside it */
+	flex-grow: 1;
 	display: flex;
 	flex-direction: column;
 	gap: .75rem;
@@ -57,9 +61,6 @@
 .dropZone.dragging {
 	border-color: var(--color-foreground);
 	background-color: rgba(0, 0, 0, .05);
-}
-.dropZoneTitle {
-	font-weight: 600;
 }
 .chosen {
 	display: flex;
