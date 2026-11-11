@@ -1,5 +1,4 @@
-import { alignWords, characterAccuracy, pageWords } from './pagecompare';
-import ScoreCard from './ScoreCard';
+import { alignWords, pageWords, wordLetters } from './pagecompare';
 import type { Page } from './types';
 import styles from './pageresult.module.css';
 
@@ -10,8 +9,8 @@ function describeAngle(angle: number) {
 	return `Turned ${Math.abs(angle).toFixed(1)}° ${direction} to straighten it.`;
 }
 
-// The Abkai the user expected, if any, compared word by word with the
-// page's reading
+// The Abkai the user expected, if any, compared letter by letter with the
+// page's reading. Words are lined up first, then the letters within them.
 function Comparison({ abkai, expected }: { abkai: string; expected: string }) {
 	const predicted = pageWords(abkai);
 	const truth = pageWords(expected);
@@ -23,17 +22,15 @@ function Comparison({ abkai, expected }: { abkai: string; expected: string }) {
 			<h4>Compared with your text</h4>
 			<p>
 				{`${right} of ${truth.length} words right. `}
-				Red words are wrong, with what you expected after them; words with a
-				wavy line are extra; faint words are missing.
+				Red letters are wrong, letters with a wavy line are extra, and faint
+				letters are missing.
 			</p>
-			<ScoreCard score={characterAccuracy(predicted, truth)} />
 			<p className={styles.diff}>
-				{aligned.map(({ predicted, expected, status }, key) => (
-					<span key={key} className={styles[status]}>
-						{status === 'missing' ? expected : predicted}
-						{status === 'wrong' && (
-							<span className={styles.expected}> ({expected})</span>
-						)}
+				{aligned.map((word, key) => (
+					<span key={key}>
+						{wordLetters(word).map(({ letter, status }, index) => (
+							<span key={index} className={styles[status]}>{letter}</span>
+						))}
 					</span>
 				))}
 			</p>
@@ -54,6 +51,7 @@ export default function PageResult({ page, expected = '' }: {
 	return (
 		<section className={styles.page}>
 			<h3>Page</h3>
+			<div className={styles.reading}>
 			<figure className={styles.marked}>
 				<img
 					src={page.image}
@@ -81,6 +79,7 @@ export default function PageResult({ page, expected = '' }: {
 			) : (
 				<p>No Manchu was found on this page.</p>
 			)}
+			</div>
 			{expected && <Comparison abkai={page.abkai} expected={expected} />}
 		</section>
 	);

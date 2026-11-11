@@ -1,5 +1,8 @@
 // Compares a page's reading with the Abkai the user expected
 
+import { diffLetters } from './ctc';
+import type { DiffLetter } from './ctc';
+
 // The loanword marks the user might type, all counted as one. The server
 // writes ‘ after k, g and h and ʻ elsewhere.
 const MARKS = /['’‘ʻ]/g;
@@ -9,32 +12,6 @@ const normalize = (word: string) => word.toLowerCase().replace(MARKS, '\'');
 // other text
 export const pageWords = (text: string) => text.split(/\s+/)
 	.filter((word) => word && word !== '□');
-
-// The edit distance between two strings, counting each character
-function editDistance(a: string, b: string) {
-	let previous = Array.from({ length: b.length + 1 }, (_, j) => j);
-	for (let i = 1; i <= a.length; i++) {
-		const current = [i];
-		for (let j = 1; j <= b.length; j++) {
-			current[j] = Math.min(
-				previous[j] + 1,
-				current[j - 1] + 1,
-				previous[j - 1] + (a[i - 1] === b[j - 1] ? 0 : 1),
-			);
-		}
-		previous = current;
-	}
-	return previous[b.length];
-}
-
-// Character accuracy of the predicted words against the expected, as the
-// server scores single words: max(0, 1 - edit distance / length)
-export function characterAccuracy(predicted: string[], expected: string[]) {
-	const truth = expected.map(normalize).join(' ');
-	if (!truth) return 0;
-	const distance = editDistance(predicted.map(normalize).join(' '), truth);
-	return Math.max(0, 1 - distance / truth.length);
-}
 
 // A predicted word lined up with an expected one: right, wrong (a different
 // word in its place), extra (no expected word) or missing (no predicted word)
@@ -89,4 +66,14 @@ export function alignWords(predicted: string[], expected: string[]):
 		}
 	}
 	return aligned;
+}
+
+// The letters of an aligned word, each marked ok, wrong, extra or missing
+// as in a single word's prediction. Marks are compared in one form, but
+// predicted letters are shown as the server wrote them.
+export function wordLetters({ predicted = '', expected = '' }: AlignedWord):
+	DiffLetter[] {
+	return diffLetters(normalize(predicted), normalize(expected))
+		.map((entry) => (entry.index >= 0
+			? { ...entry, letter: predicted[entry.index] } : entry));
 }

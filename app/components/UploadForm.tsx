@@ -132,7 +132,13 @@ export default function UploadForm({
 	};
 
 	return (
-		<form className={styles.options} hidden={hidden} onSubmit={onSubmit}>
+		<form
+			className={[styles.options, page && styles.page].filter(Boolean).join(' ')}
+			hidden={hidden}
+			onSubmit={onSubmit}
+		>
+			{/* The page form puts its button below these */}
+			<div className={styles.inputs}>
 			<div
 				className={[styles.dropZone, dragging && styles.dragging]
 					.filter(Boolean).join(' ')}
@@ -145,7 +151,7 @@ export default function UploadForm({
 			>
 				<span className={styles.dropZoneTitle}>
 					{page
-						? 'Your image of a page: columns of words written top to bottom, read left to right'
+						? 'Upload an image of a single page'
 						: 'Your image of one word, written top to bottom'}
 				</span>
 				<div className={styles.chosen}>
@@ -196,6 +202,7 @@ export default function UploadForm({
 					/>
 				</label>
 			)}
+			</div>
 			<button type="submit" disabled={disabled || !upload}>
 				{page ? 'Read My Page' : 'Read My Image'}
 			</button>

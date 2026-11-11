@@ -13,6 +13,19 @@
 	margin-bottom: .5rem;
 }
 
+/* The text goes beside the page when there's room for both */
+.reading {
+	display: grid;
+	grid-template-columns: minmax(0, 1fr);
+	gap: 2rem;
+	align-items: start;
+}
+@media (min-width: 900px) {
+	.reading {
+		grid-template-columns: minmax(0, 3fr) minmax(16rem, 2fr);
+	}
+}
+
 .marked img {
 	max-width: 100%;
 	max-height: 80svh;
@@ -79,8 +92,4 @@
 }
 .missing {
 	opacity: .3;
-}
-.expected {
-	color: grey;
-	font-weight: normal;
 }

@@ -10,6 +10,21 @@
 .options[hidden] {
 	display: none;
 }
+/* The single-word form lays its inputs and button out in one row, and the
+   page form puts its button below the inputs */
+.inputs {
+	display: contents;
+}
+.options.page {
+	flex-direction: column;
+	align-items: flex-start;
+}
+.options.page .inputs {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: flex-end;
+	gap: 1rem;
+}
 .options label {
 	display: flex;
 	flex-direction: column;
@@ -35,6 +50,8 @@
 	border: 2px solid var(--color-foreground);
 	padding: 0.5rem;
 	border-radius: 5px;
+	resize: both;
+	max-width: 80svw;
 }
 .dropZone {
 	display: flex;
