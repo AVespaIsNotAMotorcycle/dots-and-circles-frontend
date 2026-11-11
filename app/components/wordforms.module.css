@@ -50,8 +50,8 @@
 	/* As tall as the text box beside it */
 	flex-grow: 1;
 	display: flex;
-	flex-direction: column;
-	gap: .75rem;
+	align-items: flex-start;
+	gap: 1rem;
 	padding: 1rem;
 	border: 2px dashed grey;
 	border-radius: 5px;
@@ -62,17 +62,31 @@
 	border-color: var(--color-foreground);
 	background-color: rgba(0, 0, 0, .05);
 }
-.chosen {
+/* The preview on the left, and the file's name and controls on its right */
+.preview {
+	flex-shrink: 0;
 	display: flex;
 	align-items: center;
-	gap: .75rem;
-	min-height: 2rem;
+	justify-content: center;
+	width: 5rem;
+	height: 7rem;
+	border-radius: 5px;
+	background-color: rgba(0, 0, 0, .04);
 }
-.chosen img {
-	max-width: 4rem;
-	max-height: 6rem;
+.preview img {
+	max-width: 100%;
+	max-height: 100%;
 	border-radius: 5px;
 	border: 1px solid grey;
+}
+.dropZoneControls {
+	display: flex;
+	flex-direction: column;
+	gap: .75rem;
+	min-width: 0;
+}
+.chosen {
+	overflow-wrap: anywhere;
 }
 /* The PDF's page number, in a row */
 .options label.pdfPage {

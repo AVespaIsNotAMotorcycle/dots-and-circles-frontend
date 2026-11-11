@@ -203,12 +203,34 @@ export default function UploadForm({
 				onDragLeave={() => { setDragging(false); }}
 				onDrop={onDrop}
 			>
-				<div className={styles.chosen}>
+				{/* A fixed size, so the controls beside it stay put while it loads */}
+				<div className={styles.preview}>
 					{uploadPreview && <img src={uploadPreview} alt="" />}
+				</div>
+				<div className={styles.dropZoneControls}>
+				<div className={styles.chosen}>
 					<span>
 						{pdf?.name ?? upload?.name ?? 'No file chosen'}
 						{rendering && !pdf && ' (opening…)'}
 					</span>
+				</div>
+				<div className={styles.dropZoneActions}>
+					<label className={styles.chooseButton}>
+						Choose file…
+						<input
+							type="file"
+							accept="image/*,application/pdf,.pdf"
+							className={styles.visuallyHidden}
+							onChange={(event) => {
+								takeFile(event.target.files?.[0]);
+								// So picking the same file again still counts
+								event.target.value = '';
+							}}
+						/>
+					</label>
+					<button type="button" onClick={pasteFromClipboard}>
+						Paste image
+					</button>
 				</div>
 				{pdf && (
 					<label className={styles.pdfPage}>
@@ -231,27 +253,10 @@ export default function UploadForm({
 						{rendering && <span className={styles.hint}>Rendering…</span>}
 					</label>
 				)}
-				<div className={styles.dropZoneActions}>
-					<label className={styles.chooseButton}>
-						Choose file…
-						<input
-							type="file"
-							accept="image/*,application/pdf,.pdf"
-							className={styles.visuallyHidden}
-							onChange={(event) => {
-								takeFile(event.target.files?.[0]);
-								// So picking the same file again still counts
-								event.target.value = '';
-							}}
-						/>
-					</label>
-					<button type="button" onClick={pasteFromClipboard}>
-						Paste image
-					</button>
-				</div>
 				<span className={styles.hint}>
 					or drag one here, or press Ctrl+V (⌘V on a Mac)
 				</span>
+				</div>
 			</div>
 			</div>
 			<div className={styles.field}>
