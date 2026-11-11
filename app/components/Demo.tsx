@@ -15,17 +15,22 @@ import type { Romanization } from './romanization';
 import Switch from './Switch';
 import UploadForm from './UploadForm';
 import useTokenHighlight from './useTokenHighlight';
-import type { ErrorResponse, Page, Source, Word } from './types';
+import type { ErrorResponse, Page, RandomPage, Source, Word } from './types';
 
 const BACKEND = process.env.NEXT_PUBLIC_BACKEND
 
 // Which form shows
-type Mode = 'random' | 'upload' | 'page';
+type Mode = 'random' | 'upload' | 'randomPage' | 'page';
 const MODES: [Mode, string][] = [
 	['random', 'Random word'],
 	['upload', 'Your image'],
+	['randomPage', 'Random page'],
 	['page', 'Your page'],
 ];
+// The modes that show a page rather than a word
+type PageMode = 'randomPage' | 'page';
+const isPageMode = (mode: Mode): mode is PageMode => mode === 'randomPage'
+	|| mode === 'page';
 const ROMANIZATIONS = Object.entries(ROMANIZATION_NAMES) as
 	[Romanization, string][];
 
@@ -35,12 +40,16 @@ export default function Demo({ backendAwake = false }: {
 	// The word on show: the backend's /random or /upload/single response
 	const [word, setWord] = useState<Word>();
 	const results = word?.results ?? [];
-	// The page on show: the backend's /upload/multiple response, and the
-	// Abkai the user expected it to say ('' if they didn't say)
-	const [page, setPage] = useState<{ result: Page; expected: string }>();
+	// The page on show in each page mode: the backend's /upload/multiple or
+	// /random?source=page response, and the Abkai expected ('' if unknown):
+	// the user's, or the random page's transcription
+	const [pages, setPages] = useState<
+		Partial<Record<PageMode, { result: Page | RandomPage; expected: string }>>
+	>({});
 	// false, or the LoadingCard message to show
 	const [loading, setLoading] = useState<LoadingMessage | false>(false);
 	const [mode, setMode] = useState<Mode>('random');
+	const page = isPageMode(mode) ? pages[mode] : undefined;
 	// { mode, message }: shown only under the mode it came from
 	const [error, setError] = useState<{ mode: Mode; message: string }>();
 	// How words are spelled in Latin letters
@@ -101,7 +110,22 @@ export default function Demo({ backendAwake = false }: {
 		request('page', 'readingPage',
 			() => axios.post<Page>(`${BACKEND}/upload/multiple`, body),
 			'Couldn\'t read the page.',
-			(result) => { setPage({ result, expected }); });
+			(result) => {
+				setPages((previous) => ({ ...previous, page: { result, expected } }));
+			});
+	};
+
+	const loadPage = () => {
+		request('randomPage', 'loadingPage',
+			() => axios.get<RandomPage>(`${BACKEND}/random`,
+				{ params: { source: 'page' } }),
+			'Couldn\'t load a page.',
+			(result) => {
+				setPages((previous) => ({
+					...previous,
+					randomPage: { result, expected: result.transcription },
+				}));
+			});
 	};
 
 	useEffect(() => {
@@ -127,6 +151,11 @@ export default function Demo({ backendAwake = false }: {
 					disabled={busy}
 					onLoad={load}
 				/>
+				<div className={styles.randomPage} hidden={mode !== 'randomPage'}>
+					<button type="button" disabled={busy} onClick={loadPage}>
+						Load Random Page
+					</button>
+				</div>
 				<UploadForm
 					hidden={mode !== 'upload'}
 					disabled={busy}
@@ -152,7 +181,7 @@ export default function Demo({ backendAwake = false }: {
 					<p className={styles.error} role="alert">{error.message}</p>
 				)}
 			</div>
-			{mode === 'page' ? (
+			{isPageMode(mode) ? (
 				page && <PageResult page={page.result} expected={page.expected} />
 			) : (<>
 			<section className={styles.lexigraph}>

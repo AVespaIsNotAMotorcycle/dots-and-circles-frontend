@@ -73,3 +73,18 @@ export type Page = {
 	// In reading order
 	boxes: PageBox[];
 };
+
+// A random real page read by one model: GET /random?source=page
+export type RandomPage = Page & {
+	source: 'page';
+	name: string;
+	// The page as saved, before deskewing, as a data: URL
+	'original-image': string;
+	// The known text: a line per Manchu column, in Abkai with punctuation
+	transcription: string;
+	// How the reading compares with the transcription, from 0 to 1
+	score: { characters: number; words: number };
+	// Who to credit for the page, and a link to it, null if not listed
+	credit: string | null;
+	link: string | null;
+};

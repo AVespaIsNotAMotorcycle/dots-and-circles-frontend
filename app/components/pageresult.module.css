@@ -36,6 +36,10 @@
 	margin-top: .5rem;
 	color: grey;
 }
+.credit {
+	display: block;
+	margin-top: .25rem;
+}
 
 .texts {
 	display: flex;

@@ -9,8 +9,11 @@ const MARKS = /['’‘ʻ]/g;
 const normalize = (word: string) => word.toLowerCase().replace(MARKS, '\'');
 
 // The words of an Abkai text, leaving out the □ that stands for each box of
-// other text
-export const pageWords = (text: string) => text.split(/\s+/)
+// other text, and the punctuation and footnote marks ([1]) in transcriptions,
+// which the reader doesn't give
+export const pageWords = (text: string) => text
+	.replace(/\[\d+\]|[,.᠈᠉]/g, ' ')
+	.split(/\s+/)
 	.filter((word) => word && word !== '□');
 
 // A predicted word lined up with an expected one: right, wrong (a different

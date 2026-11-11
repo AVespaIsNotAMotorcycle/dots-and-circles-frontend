@@ -1,5 +1,5 @@
 import { alignWords, pageWords, wordLetters } from './pagecompare';
-import type { Page } from './types';
+import type { Page, RandomPage } from './types';
 import styles from './pageresult.module.css';
 
 // How the page was turned to straighten it, or undefined if it barely was
@@ -9,9 +9,17 @@ function describeAngle(angle: number) {
 	return `Turned ${Math.abs(angle).toFixed(1)}° ${direction} to straighten it.`;
 }
 
-// The Abkai the user expected, if any, compared letter by letter with the
-// page's reading. Words are lined up first, then the letters within them.
-function Comparison({ abkai, expected }: { abkai: string; expected: string }) {
+const percent = (value: number) => value
+	.toLocaleString(undefined, { style: 'percent', maximumFractionDigits: 1 });
+
+// The Abkai expected, if any, compared letter by letter with the page's
+// reading. Words are lined up first, then the letters within them. A random
+// page has its transcription and the server's score.
+function Comparison({ abkai, expected, score }: {
+	abkai: string;
+	expected: string;
+	score?: RandomPage['score'];
+}) {
 	const predicted = pageWords(abkai);
 	const truth = pageWords(expected);
 	const aligned = alignWords(predicted, truth);
@@ -19,9 +27,11 @@ function Comparison({ abkai, expected }: { abkai: string; expected: string }) {
 
 	return (
 		<section className={styles.comparison}>
-			<h4>Compared with your text</h4>
+			<h4>{score ? 'Compared with the transcription' : 'Compared with your text'}</h4>
 			<p>
-				{`${right} of ${truth.length} words right. `}
+				{score
+					? `${percent(score.characters)} of letters and ${percent(score.words)} of words right, matching each line of the transcription to the closest line read, without punctuation. `
+					: `${right} of ${truth.length} words right. `}
 				Red letters are wrong, letters with a wavy line are extra, and faint
 				letters are missing.
 			</p>
@@ -38,13 +48,15 @@ function Comparison({ abkai, expected }: { abkai: string; expected: string }) {
 	);
 }
 
-// A page read by POST /upload/multiple: the page with its boxes drawn on,
-// its text in Manchu and Abkai, and how that compares with the Abkai the
-// user expected, if they gave it
+// A page read by POST /upload/multiple or GET /random?source=page: the page
+// with its boxes drawn on, its text in Manchu and Abkai, and how that
+// compares with the Abkai expected (the user's, or a random page's
+// transcription)
 export default function PageResult({ page, expected = '' }: {
-	page: Page;
+	page: Page | RandomPage;
 	expected?: string;
 }) {
+	const random = 'transcription' in page ? page : undefined;
 	const angle = describeAngle(page.angle);
 	const found = page.boxes.some(({ kind }) => kind === 'manchu');
 
@@ -60,6 +72,14 @@ export default function PageResult({ page, expected = '' }: {
 				<figcaption>
 					{`Read by ${page.model}. Manchu words are outlined in green and labelled with their reading; other text is outlined in red.`}
 					{angle && ` ${angle}`}
+					{random?.credit && (
+						<span className={styles.credit}>
+							{'Page: '}
+							{random.link
+								? <a href={random.link} target="_blank" rel="noreferrer">{random.credit}</a>
+								: random.credit}
+						</span>
+					)}
 				</figcaption>
 			</figure>
 			{found ? (
@@ -80,7 +100,9 @@ export default function PageResult({ page, expected = '' }: {
 				<p>No Manchu was found on this page.</p>
 			)}
 			</div>
-			{expected && <Comparison abkai={page.abkai} expected={expected} />}
+			{expected && (
+				<Comparison abkai={page.abkai} expected={expected} score={random?.score} />
+			)}
 		</section>
 	);
 }
