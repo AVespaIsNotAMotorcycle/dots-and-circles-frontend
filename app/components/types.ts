@@ -45,6 +45,8 @@ export type PageBox = {
 	y: number;
 	w: number;
 	h: number;
+	// The part of the page inside the box, as a PNG data: URL
+	image: string;
 	// Its line of the page's text, or null if its column has no Manchu
 	line: number | null;
 	// Its place in its column, counting from the top
@@ -62,7 +64,8 @@ export type PageBox = {
 export type Page = {
 	// The name of the model that read it
 	model: string;
-	// The page, deskewed and with its boxes drawn on, as a data: URL
+	// The page, deskewed and with nothing drawn on it, as a data: URL. Box
+	// coordinates are in this image.
 	image: string;
 	// How far the page was turned anticlockwise to straighten it, in degrees
 	angle: number;

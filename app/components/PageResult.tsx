@@ -1,5 +1,7 @@
+import { useEffect, useRef, useState } from 'react';
+
 import { alignWords, pageWords, wordLetters } from './pagecompare';
-import type { Page, RandomPage } from './types';
+import type { Page, PageBox, RandomPage } from './types';
 import styles from './pageresult.module.css';
 
 // How the page was turned to straighten it, or undefined if it barely was
@@ -48,8 +50,132 @@ function Comparison({ abkai, expected, score }: {
 	);
 }
 
+// One box on the page: green with its Abkai reading written down it for
+// Manchu, red for other text. Clicking it (or Enter or Space) calls onOpen.
+function BoxOutline({ box, onOpen }: { box: PageBox; onOpen: () => void }) {
+	const manchu = box.kind === 'manchu';
+	const reading = box['prediction-abkai'] ?? '';
+	// Written top to bottom, as wide as the box allows, but no longer than it
+	const fontSize = Math.min(box.w * 0.6,
+		(box.h * 0.9) / Math.max(reading.length * 0.6, 1));
+	return (
+		<g
+			className={manchu ? styles.manchuBox : styles.otherBox}
+			role="button"
+			tabIndex={0}
+			aria-label={manchu ? `Manchu word read as ${reading}` : 'Other text'}
+			onClick={onOpen}
+			onKeyDown={(event) => {
+				if (event.key !== 'Enter' && event.key !== ' ') return;
+				event.preventDefault();
+				onOpen();
+			}}
+		>
+			<rect x={box.x} y={box.y} width={box.w} height={box.h} />
+			{manchu && reading && (
+				<text
+					x={box.x + box.w / 2}
+					y={box.y + box.h / 2}
+					fontSize={fontSize}
+				>
+					{reading}
+				</text>
+			)}
+		</g>
+	);
+}
+
+// The part of the page in a box, with the model's reading of it
+function BoxDialog({ box, onClose }: {
+	box: PageBox | undefined;
+	onClose: () => void;
+}) {
+	const dialog = useRef<HTMLDialogElement>(null);
+	useEffect(() => {
+		if (box && !dialog.current?.open) dialog.current?.showModal();
+		if (!box && dialog.current?.open) dialog.current?.close();
+	}, [box]);
+	const manchu = box?.kind === 'manchu';
+
+	return (
+		<dialog
+			ref={dialog}
+			className={styles.dialog}
+			onClose={onClose}
+			// A click on the backdrop lands on the dialog itself
+			onClick={(event) => {
+				if (event.target === event.currentTarget) onClose();
+			}}
+		>
+			{box && (
+				<div className={styles.dialogBody}>
+					<img src={box.image} alt="The part of the page in this box" />
+					<div className={styles.dialogText}>
+						{manchu ? (
+							<>
+								<h4>Model Prediction</h4>
+								<p className={styles.dialogManchu}>{box['prediction-manchu']}</p>
+								<p className={styles.abkai}>{box['prediction-abkai']}</p>
+								{box.confidence !== null && (
+									<p className={styles.hint}>
+										{`Confidence: ${percent(box.confidence)}`}
+									</p>
+								)}
+							</>
+						) : (
+							<>
+								<h4>Not Manchu</h4>
+								<p>
+									{`The classifier gives it a ${percent(box['manchu-probability'])} chance of being Manchu, so the model didn't read it.`}
+								</p>
+							</>
+						)}
+						<button type="button" onClick={onClose}>Close</button>
+					</div>
+				</div>
+			)}
+		</dialog>
+	);
+}
+
+// The page with its boxes drawn over it, in the page image's own pixels
+function PageImage({ page }: { page: Page }) {
+	const [size, setSize] = useState<{ image: string; w: number; h: number }>();
+	const [open, setOpen] = useState<PageBox>();
+	useEffect(() => {
+		const image = new Image();
+		image.onload = () => {
+			setSize({ image: page.image, w: image.naturalWidth, h: image.naturalHeight });
+		};
+		image.src = page.image;
+	}, [page.image]);
+
+	// Until the new page's size is known
+	if (size?.image !== page.image) {
+		return <div className={styles.pagePlaceholder} />;
+	}
+	return (
+		<>
+			<svg
+				className={styles.pageImage}
+				width={size.w}
+				height={size.h}
+				viewBox={`0 0 ${size.w} ${size.h}`}
+				role="group"
+				aria-label="The page, with each Manchu word outlined in green and labelled with its reading, and other text outlined in red. Select a box to see it closer."
+			>
+				<image href={page.image} width={size.w} height={size.h} />
+				{page.boxes.map((box, key) => (
+					<BoxOutline key={key} box={box} onOpen={() => { setOpen(box); }} />
+				))}
+			</svg>
+			<BoxDialog box={open} onClose={() => { setOpen(undefined); }} />
+		</>
+	);
+}
+
 // A page read by POST /upload/multiple or GET /random?source=page: the page
-// with its boxes drawn on, its text in Manchu and Abkai, and how that
+// with its boxes drawn over it, its text in Manchu and Abkai, and how that
 // compares with the Abkai expected (the user's, or a random page's
 // transcription)
 export default function PageResult({ page, expected = '' }: {
@@ -65,12 +191,9 @@ export default function PageResult({ page, expected = '' }: {
 			<h3>Page</h3>
 			<div className={styles.reading}>
 			<figure className={styles.marked}>
-				<img
-					src={page.image}
-					alt="Your page, with each Manchu word outlined in green and labelled with its reading, and other text outlined in red"
-				/>
+				<PageImage page={page} />
 				<figcaption>
-					{`Read by ${page.model}. Manchu words are outlined in green and labelled with their reading; other text is outlined in red.`}
+					{`Read by ${page.model}. Manchu words are outlined in green and labelled with their reading; other text is outlined in red. Click a box to see it closer.`}
 					{angle && ` ${angle}`}
 					{random?.credit && (
 						<span className={styles.credit}>

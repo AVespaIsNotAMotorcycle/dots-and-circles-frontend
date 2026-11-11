@@ -26,11 +26,90 @@
 	}
 }
 
-.marked img {
+.pageImage {
+	display: block;
 	max-width: 100%;
-	max-height: 80svh;
+	height: auto;
 	border-radius: 5px;
 	border: 1px solid grey;
+}
+.pagePlaceholder {
+	min-height: 10rem;
+}
+.manchuBox, .otherBox {
+	cursor: pointer;
+	outline: none;
+}
+.manchuBox rect, .otherBox rect {
+	stroke-width: 2px;
+	vector-effect: non-scaling-stroke;
+}
+.manchuBox rect {
+	stroke: green;
+	fill: rgba(255, 255, 255, .55);
+}
+.otherBox rect {
+	stroke: red;
+	fill: transparent;
+}
+.manchuBox:hover rect, .otherBox:hover rect,
+.manchuBox:focus-visible rect, .otherBox:focus-visible rect {
+	stroke-width: 4px;
+}
+.manchuBox:hover rect, .manchuBox:focus-visible rect {
+	fill: rgba(255, 255, 255, .8);
+}
+.otherBox:hover rect, .otherBox:focus-visible rect {
+	fill: rgba(255, 0, 0, .1);
+}
+/* Written down the box, centred in it */
+.manchuBox text {
+	writing-mode: vertical-rl;
+	text-anchor: middle;
+	dominant-baseline: central;
+	fill: darkgreen;
+	font-weight: 800;
+	pointer-events: none;
+}
+
+.dialog {
+	/* Tailwind's reset removes the margin that centres a dialog */
+	margin: auto;
+	padding: 1.5rem;
+	border: 2px solid black;
+	border-radius: 5px;
+	max-width: min(40rem, calc(100svw - 2rem));
+	max-height: calc(100svh - 2rem);
+}
+.dialog::backdrop {
+	background: rgba(0, 0, 0, .5);
+}
+.dialogBody {
+	display: flex;
+	gap: 1.5rem;
+	align-items: flex-start;
+}
+.dialogBody img {
+	/* Box images are small, so scale them up to read */
+	height: min(60svh, 24rem);
+	max-width: 50%;
+	object-fit: contain;
+	object-position: top;
+}
+.dialogText {
+	display: flex;
+	flex-direction: column;
+	align-items: flex-start;
+	gap: 1rem;
+}
+.dialogText p + p {
+	margin-top: 0;
+}
+.dialogManchu {
+	font-family: manchu0;
+	font-size: 3rem;
+	writing-mode: vertical-lr;
+	max-height: 40svh;
 }
 .marked figcaption {
 	margin-top: .5rem;
