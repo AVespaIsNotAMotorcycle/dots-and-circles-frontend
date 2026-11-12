@@ -1,0 +1,197 @@
+.editor {
+	display: flex;
+	flex-direction: column;
+	gap: .75rem;
+}
+
+.toolbar {
+	display: flex;
+	flex-direction: column;
+	gap: .5rem;
+}
+.hint {
+	color: grey;
+	font-size: .875rem;
+}
+.controls, .actions {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: .5rem;
+}
+.editor button:disabled {
+	opacity: .5;
+	pointer-events: none;
+}
+
+.kind {
+	display: flex;
+	gap: 1rem;
+	border: 2px solid var(--color-foreground);
+	border-radius: 5px;
+	padding: .5rem .75rem;
+}
+.kind:disabled {
+	opacity: .5;
+}
+.kind label {
+	display: flex;
+	align-items: center;
+	gap: .35rem;
+	cursor: pointer;
+}
+/* globals.css sizes every input for text */
+.kind input {
+	width: auto;
+	margin: 0;
+	padding: 0;
+}
+
+.visuallyHidden {
+	position: absolute;
+	width: 1px;
+	height: 1px;
+	overflow: hidden;
+	clip-path: inset(50%);
+	white-space: nowrap;
+}
+
+.canvas {
+	display: block;
+	max-width: 100%;
+	height: auto;
+	border-radius: 5px;
+	border: 1px solid grey;
+	cursor: crosshair;
+	/* So a drag draws a box rather than scrolling the page on a touch screen */
+	touch-action: none;
+	user-select: none;
+}
+.canvas:focus-visible {
+	outline: 3px solid #1e6fd9;
+	outline-offset: 2px;
+}
+.busy {
+	opacity: .6;
+	pointer-events: none;
+}
+
+.canvas rect {
+	stroke-width: 2px;
+	vector-effect: non-scaling-stroke;
+}
+.manchu > rect:first-child {
+	stroke: #1e6fd9;
+	fill: rgba(255, 255, 255, .45);
+	cursor: move;
+}
+.manchu text {
+	fill: #0b3d91;
+	writing-mode: vertical-rl;
+	text-anchor: middle;
+	dominant-baseline: central;
+	font-weight: 800;
+	pointer-events: none;
+}
+/* Manchu that keeps its reading, coloured as on the page: read right or
+   wrong, with nothing to compare it with, or with low confidence */
+.right > rect:first-child {
+	stroke: green;
+}
+.right text {
+	fill: darkgreen;
+}
+.wrong > rect:first-child {
+	stroke: red;
+}
+.wrong text {
+	fill: darkred;
+}
+.lowConfidence > rect:first-child {
+	stroke: #e6b800;
+}
+.lowConfidence text {
+	fill: #8a6d00;
+}
+/* Manchu that will be read again: drawn, moved, resized or made Manchu.
+   Purple, to stand apart from the colours above. */
+.manchu.changed > rect:first-child {
+	stroke: #7c3aed;
+	stroke-dasharray: 6 3;
+	fill: rgba(237, 233, 254, .4);
+}
+.other > rect:first-child {
+	stroke: grey;
+	fill: rgba(128, 128, 128, .08);
+	cursor: move;
+}
+.selected > rect:first-child {
+	stroke-width: 4px;
+}
+.handle {
+	fill: white;
+	stroke: black;
+	stroke-width: 1.5px !important;
+}
+.drawing {
+	stroke: #7c3aed;
+	stroke-dasharray: 6 3;
+	fill: rgba(237, 233, 254, .4);
+	pointer-events: none;
+}
+
+/* Holds the page, so the magnifier can be placed over it */
+.canvasWrap {
+	position: relative;
+	width: fit-content;
+	max-width: 100%;
+}
+
+/* The magnifier shown while drawing or resizing a box */
+.loupe {
+	position: absolute;
+	z-index: 1;
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	gap: .25rem;
+	padding: 4px;
+	background: white;
+	border: 2px solid var(--color-foreground);
+	border-radius: 5px;
+	box-shadow: rgba(0, 0, 0, .3) 0 4px 12px;
+	pointer-events: none;
+	font-size: .75rem;
+	font-variant-numeric: tabular-nums;
+}
+.loupe svg {
+	display: block;
+	border-radius: 3px;
+}
+/* Sharp pixels, to see exactly where an edge falls */
+.loupe image {
+	image-rendering: pixelated;
+}
+/* Past the page's edge */
+.loupeOutside {
+	fill: #ddd;
+}
+.loupeOther {
+	fill: none;
+	stroke: rgba(30, 111, 217, .6);
+	stroke-width: 1px;
+	vector-effect: non-scaling-stroke;
+}
+.loupeBox {
+	fill: none;
+	stroke: #7c3aed;
+	stroke-width: 2px;
+	vector-effect: non-scaling-stroke;
+}
+/* The edges being dragged */
+.loupeEdge {
+	stroke: #7c3aed;
+	stroke-width: 4px;
+	stroke-linecap: square;
+	vector-effect: non-scaling-stroke;
+}

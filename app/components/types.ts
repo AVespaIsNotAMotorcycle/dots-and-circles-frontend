@@ -93,3 +93,16 @@ export type SamplePage = Page & {
 	credit: string | null;
 	link: string | null;
 };
+
+// A box sent to POST /upload/multiple/boxes, in the page image's pixels.
+// kind left out lets the classifier decide. A box the user hasn't changed
+// is sent with its reading, so it isn't read again.
+export type EditedBox = {
+	x: number;
+	y: number;
+	w: number;
+	h: number;
+	kind?: 'manchu' | 'other';
+	'prediction-manchu'?: string;
+	confidence?: number;
+};

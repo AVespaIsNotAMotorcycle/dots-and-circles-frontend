@@ -1,7 +1,9 @@
 import { useEffect, useRef, useState } from 'react';
 
+import BoxEditor from './BoxEditor';
+import type { BoxStatus } from './BoxEditor';
 import { alignWords, boxStatuses, pageWords, wordLetters, wordsRight } from './pagecompare';
-import type { Page, PageBox, SamplePage } from './types';
+import type { EditedBox, Page, PageBox, SamplePage } from './types';
 import styles from './pageresult.module.css';
 
 // How the page was turned to straighten it, or undefined if it barely was
@@ -11,15 +13,21 @@ function describeAngle(angle: number) {
 	return `Turned ${Math.abs(angle).toFixed(1)}° ${direction} to straighten it.`;
 }
 
+// A page read, perhaps a sample one. A sample page read again in edited
+// boxes keeps its transcription and credit, but not the server's score.
+export type ReadPage = Page | SamplePage | Omit<SamplePage, 'score'>;
+
 const percent = (value: number) => value
 	.toLocaleString(undefined, { style: 'percent', maximumFractionDigits: 1 });
 
 // The Abkai expected, if any, compared letter by letter with the page's
 // reading. Words are lined up first, then the letters within them. A random
 // page has its transcription and the server's score.
-function Comparison({ abkai, expected, score }: {
+function Comparison({ abkai, expected, transcription, score }: {
 	abkai: string;
 	expected: string;
+	// Whether expected is a sample page's transcription
+	transcription: boolean;
 	score?: SamplePage['score'];
 }) {
 	const aligned = alignWords(pageWords(abkai), pageWords(expected));
@@ -27,7 +35,7 @@ function Comparison({ abkai, expected, score }: {
 
 	return (
 		<section className={styles.comparison}>
-			<h4>{score ? 'Compared with the transcription' : 'Compared with your text'}</h4>
+			<h4>{transcription ? 'Compared with the transcription' : 'Compared with your text'}</h4>
 			<p>
 				{score
 					? `${percent(score.characters)} of letters and ${percent(score.words)} of words right, matching each line of the transcription to the closest line read, without punctuation. `
@@ -157,8 +165,17 @@ function BoxDialog({ box, onClose }: {
 }
 
 // The page with its boxes drawn over it, in the page image's own pixels,
-// each Manchu box coloured by how it compares with the expected Abkai
-function PageImage({ page, expected }: { page: Page; expected: string }) {
+// each Manchu box coloured by how it compares with the expected Abkai. While
+// editing, the boxes can be changed and sent with onSubmit to be read again.
+function PageImage({ page, expected, editing }: {
+	page: Page;
+	expected: string;
+	editing?: {
+		busy: boolean;
+		onSubmit: (boxes: EditedBox[]) => void;
+		onCancel: () => void;
+	};
+}) {
 	const statuses = boxStatuses(page.boxes, expected);
 	const [size, setSize] = useState<{ image: string; w: number; h: number }>();
 	const [open, setOpen] = useState<PageBox>();
@@ -173,6 +190,12 @@ function PageImage({ page, expected }: { page: Page; expected: string }) {
 	// Until the new page's size is known
 	if (size?.image !== page.image) {
 		return <div className={styles.pagePlaceholder} />;
+	}
+	if (editing) {
+		// Coloured as outside the editor, so the boxes read wrong stay marked
+		const editStatuses = page.boxes.map((box, index): BoxStatus => (
+			box['low-confidence'] ? 'lowConfidence' : statuses[index] ?? 'unchecked'));
+		return <BoxEditor page={page} statuses={editStatuses} size={size} {...editing} />;
 	}
 	return (
 		<>
@@ -203,15 +226,34 @@ function PageImage({ page, expected }: { page: Page; expected: string }) {
 // with its boxes drawn over it, its text in Manchu and Abkai, and how that
 // compares with the Abkai expected (the user's, or a sample page's
 // transcription)
-export default function PageResult({ page, expected = '', title = 'Page', id }: {
-	page: Page | SamplePage;
+export default function PageResult({
+	page, expected = '', title = 'Page', id, onReread,
+}: {
+	page: ReadPage;
 	expected?: string;
 	// Its heading, e.g. a PDF's page number
 	title?: string;
 	// Its element id, for links to it
 	id?: string;
+	// Reads the page again in edited boxes, rejecting with why it couldn't.
+	// Without it, the boxes can't be edited.
+	onReread?: (boxes: EditedBox[]) => Promise<void>;
 }) {
 	const random = 'transcription' in page ? page : undefined;
+	// The page whose boxes are being edited, so a new page ends the editing
+	const [editingPage, setEditingPage] = useState<ReadPage>();
+	const editing = editingPage === page;
+	const [rereading, setRereading] = useState(false);
+	const [rereadError, setRereadError] = useState<string>();
+
+	const reread = (boxes: EditedBox[]) => {
+		if (!onReread) return;
+		setRereading(true);
+		setRereadError(undefined);
+		onReread(boxes)
+			.catch((error: Error) => { setRereadError(error.message); })
+			.finally(() => { setRereading(false); });
+	};
 	const angle = describeAngle(page.angle);
 	const found = page.boxes.some(({ kind }) => kind === 'manchu');
 	// Whether there's any text to compare the reading with
@@ -222,9 +264,22 @@ export default function PageResult({ page, expected = '', title = 'Page', id }: 
 			<h3>{title}</h3>
 			<div className={styles.reading}>
 			<figure className={styles.marked}>
-				<PageImage page={page} expected={expected} />
+				<PageImage
+					page={page}
+					expected={expected}
+					editing={editing ? {
+						busy: rereading,
+						onSubmit: reread,
+						onCancel: () => {
+							setEditingPage(undefined);
+							setRereadError(undefined);
+						},
+					} : undefined}
+				/>
+				{rereadError && <p className={styles.error} role="alert">{rereadError}</p>}
 				<figcaption>
-					{`Read by ${page.model}. Manchu words are labelled with their reading and outlined ${compared ? 'in green if read right or red if read wrong' : 'in blue'}, or in yellow if read with too little confidence to include in the text; other text is outlined in grey. Click a box to see it closer.`}
+					{editing && 'Boxes outlined in purple dashes are read again; the rest keep their reading and colour. '}
+					{!editing && `Read by ${page.model}. Manchu words are labelled with their reading and outlined ${compared ? 'in green if read right or red if read wrong' : 'in blue'}, or in yellow if read with too little confidence to include in the text; other text is outlined in grey. Click a box to see it closer.`}
 					{angle && ` ${angle}`}
 					{random?.credit && (
 						<span className={styles.credit}>
@@ -233,6 +288,15 @@ export default function PageResult({ page, expected = '', title = 'Page', id }: 
 								? <a href={random.link} target="_blank" rel="noreferrer">{random.credit}</a>
 								: random.credit}
 						</span>
+					)}
+					{!editing && onReread && (
+						<button
+							type="button"
+							className={styles.editButton}
+							onClick={() => { setEditingPage(page); }}
+						>
+							Edit Boxes
+						</button>
 					)}
 				</figcaption>
 			</figure>
@@ -255,7 +319,12 @@ export default function PageResult({ page, expected = '', title = 'Page', id }: 
 			)}
 			</div>
 			{expected && (
-				<Comparison abkai={page.abkai} expected={expected} score={random?.score} />
+				<Comparison
+					abkai={page.abkai}
+					expected={expected}
+					transcription={Boolean(random)}
+					score={(random as Partial<SamplePage> | undefined)?.score}
+				/>
 			)}
 		</section>
 	);

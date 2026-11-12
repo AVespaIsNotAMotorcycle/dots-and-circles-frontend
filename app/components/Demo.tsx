@@ -8,10 +8,11 @@ import styles from './demo.module.css';
 import LoadingCard from './LoadingCard';
 import type { LoadingMessage } from './LoadingCard';
 import PageResult from './PageResult';
+import type { ReadPage } from './PageResult';
 import PdfSummary from './PdfSummary';
 import SamplePageForm from './SamplePageForm';
 import UploadForm from './UploadForm';
-import type { ErrorResponse, Page, SamplePage } from './types';
+import type { EditedBox, ErrorResponse, Page, SamplePage } from './types';
 
 const BACKEND = process.env.NEXT_PUBLIC_BACKEND
 
@@ -20,7 +21,7 @@ const BACKEND = process.env.NEXT_PUBLIC_BACKEND
 // read. title heads it, for a PDF's pages.
 type Reading = {
 	title?: string;
-	result?: Page | SamplePage;
+	result?: ReadPage;
 	expected: string;
 	error?: string;
 };
@@ -150,6 +151,27 @@ export default function Demo({ backendAwake = false }: {
 		setLoading(false);
 	};
 
+	// Reads readings[index]'s page again in the boxes the user edited. It
+	// keeps its title, expected text, angle and, for a sample page, its
+	// transcription and credit, but not the server's score of the old
+	// reading. Rejects with why it couldn't.
+	const reread = (index: number, boxes: EditedBox[]) => {
+		const current = run.current;
+		const old = readings[index].result!;
+		return inTurn(() => axios.post<Page>(`${BACKEND}/upload/multiple/boxes`,
+			{ image: old.image, boxes }))
+			.then(({ data }) => {
+				if (current !== run.current) return;
+				const result: ReadPage = { ...old, ...data, angle: old.angle };
+				if ('score' in result) delete (result as Partial<SamplePage>).score;
+				setReadings((previous) => previous.map((reading, i) => (
+					i === index ? { ...reading, result } : reading)));
+			})
+			.catch((error) => {
+				throw new Error(errorMessage(error, 'Couldn\'t read the boxes.'));
+			});
+	};
+
 	// Loads the sample page with this name, or any one for ''
 	const loadPage = (name = '') => {
 		request('loadingPage',
@@ -212,6 +234,7 @@ export default function Demo({ backendAwake = false }: {
 							expected={expected}
 							title={title}
 							id={pdfPages !== undefined ? pdfPageId(index + 1) : undefined}
+							onReread={(boxes) => reread(index, boxes)}
 						/>
 					)
 					: (
