@@ -522,3 +522,14 @@ button.choice:has(.shortcut) {
 		padding-right: .625rem;
 	}
 }
+
+/* A box and its words in the text, highlighted together while either is
+   hovered or focused */
+.manchuBox.linked > rect, .otherBox.linked > rect {
+	stroke: var(--accent);
+	stroke-width: 4px;
+}
+.linkedWord {
+	background: var(--accent-soft);
+	box-shadow: 0 0 0 2px var(--accent);
+}

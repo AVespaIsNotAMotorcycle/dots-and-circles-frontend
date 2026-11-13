@@ -82,8 +82,26 @@ const SOURCES: Record<ClosestWord['sources'][number], string> = {
 // Other text is grey. A box whose closest dictionary words are worth a look
 // has a badge on its corner. One the user corrected shows their word in
 // teal, with a pencil badge. Clicking it (or Enter or Space) calls onOpen.
-function BoxOutline({ box, id, status, suggests, correction, badge, onOpen }: {
+// Which box is linked (hovered or focused, as a box or a word of the
+// text), so its box and words are highlighted together, and how to change
+// that: a box's index, or undefined for none
+type Linking = { linked?: number; onLink: (index: number | undefined) => void };
+
+// The events that link a box or word while it's hovered or focused
+const linkEvents = (index: number, onLink: Linking['onLink']) => ({
+	onMouseEnter: () => { onLink(index); },
+	onMouseLeave: () => { onLink(undefined); },
+	onFocus: () => { onLink(index); },
+	onBlur: () => { onLink(undefined); },
+});
+
+function BoxOutline({
+	box, id, status, suggests, correction, badge, linked, linkEvents: events, onOpen,
+}: {
 	box: PageBox;
+	// Whether it's highlighted with its words, and the events that do that
+	linked: boolean;
+	linkEvents: ReturnType<typeof linkEvents>;
 	// Its data-box-id, so it can be found to go to
 	id?: string;
 	correction?: Correction;
@@ -110,8 +128,10 @@ function BoxOutline({ box, id, status, suggests, correction, badge, onOpen }: {
 			className={[manchu && !notManchu ? styles.manchuBox : styles.otherBox,
 				manchu && !notManchu && !unsure && styles[status ?? 'unchecked'],
 				manchu && !notManchu && unsure && styles.lowConfidence,
-				correction && !notManchu && styles.corrected].filter(Boolean).join(' ')}
+				correction && !notManchu && styles.corrected,
+				linked && styles.linked].filter(Boolean).join(' ')}
 			data-box-id={id}
+			{...events}
 			role="button"
 			tabIndex={0}
 			aria-label={manchu
@@ -554,7 +574,9 @@ function BoxDialog({
 // The page with its boxes drawn over it, in the page image's own pixels,
 // each Manchu box coloured by how it compares with the expected Abkai. While
 // editing, the boxes can be changed and sent with onSubmit to be read again.
-function PageImage({ page, statuses, suggests, corrections, boxId, onOpen, editing }: {
+function PageImage({
+	page, statuses, suggests, corrections, boxId, linked, onLink, onOpen, editing,
+}: Linking & {
 	page: Page;
 	// Each box's data-box-id, so it can be found to go to
 	boxId?: (index: number) => string;
@@ -617,6 +639,8 @@ function PageImage({ page, statuses, suggests, corrections, boxId, onOpen, editi
 						suggests={suggests[key]}
 						correction={box.kind === 'manchu' ? corrections[boxKey(box)] : undefined}
 						badge={BADGE * scale}
+						linked={linked === key}
+						linkEvents={linkEvents(key, onLink)}
 						onOpen={() => { onOpen(key); }}
 					/>
 				))}
@@ -629,7 +653,9 @@ function PageImage({ page, statuses, suggests, corrections, boxId, onOpen, editi
 // corrections in place. Each word read from a box opens that box close up,
 // as clicking the box does, and is marked as the box is: a ? if its closest
 // dictionary words are worth a look, or a ✎ in teal if corrected.
-function PageText({ lines, suggests, corrected, script, boxId, onOpen }: {
+function PageText({
+	lines, suggests, corrected, script, boxId, linked, onLink, onOpen,
+}: Linking & {
 	lines: TextWord[][];
 	boxId?: (index: number) => string;
 	suggests: boolean[];
@@ -653,7 +679,9 @@ function PageText({ lines, suggests, corrected, script, boxId, onOpen }: {
 								{separator}
 								<span
 									className={[styles.textWord,
-										corrected[box] && styles.correctedWord].filter(Boolean).join(' ')}
+										corrected[box] && styles.correctedWord,
+										linked === box && styles.linkedWord].filter(Boolean).join(' ')}
+									{...linkEvents(box, onLink)}
 									data-box-id={boxId?.(box)}
 									role="button"
 									tabIndex={0}
@@ -755,6 +783,17 @@ export default function PageResult({
 	const pageSize = useImageSize(page.image);
 	// ruled: whether the user made a ruling on the word, rather than just
 	// closing it
+	// The box linked with its words, for this page only
+	const [linking, setLinking] = useState<{ page: ReadPage; index: number }>();
+	const link: Linking = {
+		linked: linking?.page === page ? linking.index : undefined,
+		onLink: (index) => {
+			setLinking((previous) => {
+				if (index === undefined) return undefined;
+				return previous?.page === page && previous.index === index ? previous : { page, index };
+			});
+		},
+	};
 	const closeBox = (ruled = false) => {
 		setOpened(undefined);
 		onBoxClosed?.(ruled);
@@ -772,6 +811,7 @@ export default function PageResult({
 					corrections={corrections}
 					boxId={boxId}
 					onOpen={openBox}
+					{...link}
 					editing={editing ? {
 						busy: rereading,
 						onSubmit: reread,
@@ -816,6 +856,7 @@ export default function PageResult({
 							script="manchu"
 							boxId={boxId}
 							onOpen={openBox}
+							{...link}
 						/>
 					</section>
 					<section>
@@ -827,6 +868,7 @@ export default function PageResult({
 							script="abkai"
 							boxId={boxId}
 							onOpen={openBox}
+							{...link}
 						/>
 						<p className={styles.hint}>
 							A line per column. □ is a box of other text, such as Chinese.
