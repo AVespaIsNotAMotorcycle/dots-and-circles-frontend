@@ -160,7 +160,9 @@
 }
 .sample select,
 .sample button {
-	padding: .25rem .5rem;
+	/* One height, as a select and a button size themselves differently */
+	height: 2rem;
+	padding: 0 .5rem;
 	border-width: 1px;
 	color: var(--color-foreground);
 }

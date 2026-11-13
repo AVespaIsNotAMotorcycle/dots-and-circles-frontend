@@ -9,7 +9,8 @@
 .options {
 	display: flex;
 	flex-wrap: wrap;
-	align-items: center;
+	/* The button as tall as the boxed groups of options beside it */
+	align-items: stretch;
 	gap: .75rem;
 }
 .options fieldset {
@@ -25,12 +26,20 @@
 	padding: 0 .25rem;
 	font-size: .875rem;
 	font-weight: 600;
+	/* A set height, as a group's box starts halfway down its legend */
+	line-height: 1rem;
 }
 .options label {
 	display: flex;
 	align-items: center;
 	gap: .35rem;
 	cursor: pointer;
+}
+/* From where the groups' boxes start, halfway down their legends */
+.options button {
+	height: auto;
+	margin-top: .5rem;
+	padding-block: 0;
 }
 /* globals.css sizes every input for text */
 .options input {
