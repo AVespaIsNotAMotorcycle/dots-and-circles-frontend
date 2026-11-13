@@ -3,7 +3,7 @@ import { Geist, Geist_Mono } from "next/font/google";
 import Header from "./components/Header";
 import { RomanizationProvider } from "./components/RomanizationContext";
 import "./globals.css";
-import { SITE_URL } from "./site";
+import { SITE_DESCRIPTION, SITE_URL } from "./site";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -34,7 +34,7 @@ export const metadata: Metadata = {
     locale: "en",
   },
   twitter: { card: "summary_large_image" },
-  description: "Read printed Manchu with OCR. Upload a page or a PDF and get its text in Manchu script and Abkai romanization, check words flagged against Manchu dictionaries, and save it as text.",
+  description: SITE_DESCRIPTION,
 };
 
 export default function RootLayout({

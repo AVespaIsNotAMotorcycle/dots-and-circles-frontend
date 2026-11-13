@@ -3,12 +3,14 @@
 import Demo from './components/Demo';
 import useBackendAwake from './components/useBackendAwake';
 import styles from './main.module.css';
+import StructuredData from './StructuredData';
 
 export default function Home() {
 	const backendAwake = useBackendAwake();
 
 	return (
 		<main className={styles.homepage}>
+			<StructuredData />
 			<h1>Dots and Circles</h1>
 			<p className={styles.intro}>
 				{'Dots and Circles is a personal project by '}
