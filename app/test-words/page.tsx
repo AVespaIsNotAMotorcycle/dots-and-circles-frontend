@@ -3,7 +3,7 @@ import type { Metadata } from 'next';
 import TestWords from '../components/TestWords';
 
 export const metadata: Metadata = {
-	title: 'Test words · Dots and Circles',
+	title: 'Test words',
 	description: 'Every test word, real and synthetic, with the model\'s reading of it.',
 };
 

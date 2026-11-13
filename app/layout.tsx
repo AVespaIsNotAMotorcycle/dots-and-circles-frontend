@@ -17,7 +17,11 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   // Makes the Open Graph image's URL absolute
   metadataBase: new URL(SITE_URL),
-  title: "Dots and Circles",
+  title: {
+    // The home page's, which says what it is
+    default: "Dots and Circles: Manchu OCR",
+    template: "%s · Dots and Circles",
+  },
   description: "Read printed Manchu with OCR. Upload a page or a PDF and get its text in Manchu script and Abkai romanization, check words flagged against Manchu dictionaries, and save it as text.",
 };
 
