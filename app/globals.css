@@ -159,7 +159,7 @@ header nav .bar {
 	display: none;
 }
 
-@media (max-width: 639.98px) {
+@media (max-width: 767.98px) {
 	header {
 		padding: .5rem 1rem;
 		font-size: 1.125rem;

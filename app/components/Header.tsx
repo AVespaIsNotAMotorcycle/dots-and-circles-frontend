@@ -13,6 +13,7 @@ const GITHUB = 'https://github.com/AVespaIsNotAMotorcycle/dots-and-circles';
 const PAGES: [string, string][] = [
 	['/', 'Read a page'],
 	['/test-words', 'Test words'],
+	['/about', 'About'],
 ];
 
 // The site's pages, with the current one marked, the romanization to show

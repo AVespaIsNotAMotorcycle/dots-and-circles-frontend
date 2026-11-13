@@ -1,0 +1,28 @@
+/* Lined up with the other pages, but in a column narrow enough to read */
+.about {
+	line-height: 1.55;
+}
+.about > * {
+	max-width: 50rem;
+}
+.about h2 {
+	margin-top: 2rem;
+}
+.about h3 {
+	margin: 1.25rem 0 .375rem;
+}
+.about ul {
+	list-style: disc;
+	padding-left: 1.25rem;
+}
+.about li + li {
+	margin-top: .5rem;
+}
+.about a {
+	overflow-wrap: anywhere;
+}
+.note {
+	color: grey;
+	font-size: .9375rem;
+	margin-bottom: .375rem;
+}
