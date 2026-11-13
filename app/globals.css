@@ -96,13 +96,13 @@ header {
 	margin-bottom: 3rem;
 	box-shadow: rgba(0, 0, 0, 0.2) 0px 5px 5px;
 }
-/* The pages on the left, the tools on the right, which go to a row of their
-   own on a phone */
 header nav {
 	max-width: 80rem;
 	margin-inline: auto;
+}
+/* The pages on the left, the tools on the right */
+header nav .menu {
 	display: flex;
-	flex-wrap: wrap;
 	/* Lined up at the top, as the links have room below for the current
 	   page's underline */
 	align-items: flex-start;
@@ -154,19 +154,103 @@ header nav .romanization button[aria-pressed="true"] {
 	border-color: var(--accent);
 	color: white;
 }
-@media (max-width: 479.98px) {
+/* The small screen's bar: the current page's name and the menu button */
+header nav .bar {
+	display: none;
+}
+
+@media (max-width: 639.98px) {
 	header {
-		padding: 1rem;
+		padding: .5rem 1rem;
 		font-size: 1.125rem;
 		margin-bottom: 1rem;
 	}
-	header nav ul,
-	header nav .tools {
+	header nav .bar {
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
 		gap: 1rem;
 	}
-	/* Room for the current page's underline above the tools' row */
-	header nav {
-		row-gap: 1.75rem;
+	header nav .current {
+		font-weight: 600;
+	}
+	/* Three bars, turning into a cross while the menu's open */
+	header nav .menuButton {
+		display: flex;
+		flex-direction: column;
+		justify-content: center;
+		gap: 5px;
+		width: 2.75rem;
+		height: 2.75rem;
+		padding: 0 .625rem;
+		border: none;
+	}
+	header nav .menuButton:hover {
+		background: var(--accent-soft);
+	}
+	header nav .menuButton span {
+		display: block;
+		height: 2px;
+		border-radius: 1px;
+		background: var(--foreground);
+		transition: transform .2s, opacity .2s;
+	}
+	header.open nav .menuButton span:nth-child(1) {
+		transform: translateY(7px) rotate(45deg);
+	}
+	header.open nav .menuButton span:nth-child(2) {
+		opacity: 0;
+	}
+	header.open nav .menuButton span:nth-child(3) {
+		transform: translateY(-7px) rotate(-45deg);
+	}
+	/* The menu, under the bar while it's open: the pages one above another,
+	   then the tools */
+	header nav .menu {
+		display: none;
+	}
+	header.open nav .menu {
+		display: flex;
+		flex-direction: column;
+		align-items: stretch;
+		gap: 0;
+		padding: .25rem 0 .75rem;
+		border-top: 1px solid #ddd;
+		margin-top: .5rem;
+	}
+	header nav ul {
+		flex-direction: column;
+		gap: 0;
+	}
+	header nav ul a {
+		display: block;
+		padding: .625rem .75rem;
+		border-bottom: none;
+		border-left: 4px solid transparent;
+	}
+	header nav ul a[aria-current="page"] {
+		border-left-color: var(--accent);
+		background: var(--accent-soft);
+	}
+	header nav ul a:hover {
+		background: #f3f3f3;
+	}
+	header nav .tools {
+		justify-content: space-between;
+		align-items: center;
+		margin: .75rem 0 0;
+		padding: 0 .75rem;
+	}
+	header nav .tools a {
+		padding-bottom: 0;
+		border-bottom: none;
+	}
+	header nav .romanization {
+		margin-top: 0;
+	}
+	header nav .romanization button {
+		padding: .375rem .875rem;
+		font-size: 1rem;
 	}
 }
 
