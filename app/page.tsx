@@ -11,7 +11,10 @@ export default function Home() {
 		<main className={styles.homepage}>
 			<h1>Dots and Circles</h1>
 			<p className={styles.intro}>
-				Dots and Circles reads printed Manchu. Upload a scan or photo of a page,
+				{'Dots and Circles is a personal project by '}
+				<a href="https://sasha-m-ebersole.com/">Sasha Madden Ebersole</a>
+				{' for automatically transcribing scans of Manchu documents. '}
+				Upload a scan or photo of a page,
 				or a whole PDF, and it finds each word, reads it with a model trained
 				from scratch for Manchu, and gives you the page&apos;s text in Manchu
 				script and in Abkai romanization. Words it may have misread are flagged
