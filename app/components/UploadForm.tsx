@@ -4,6 +4,7 @@ import { useState, useEffect, useRef } from 'react';
 
 import { textForPage } from './pagecompare';
 import { isPdf, openPdf, renderPage } from './pdf';
+import { transcriptionFromText } from './transcription';
 import type { PDFDocumentProxy } from './pdf';
 import styles from './wordforms.module.css';
 
@@ -59,6 +60,8 @@ export default function UploadForm({
 	// rendered), and its optional label
 	const [upload, setUpload] = useState<File>();
 	const [uploadLabel, setUploadLabel] = useState('');
+	// Whether the transcription box is open: it's out of the way until wanted
+	const [showTranscription, setShowTranscription] = useState(false);
 	// An object URL of upload, for its thumbnail
 	const [uploadPreview, setUploadPreview] = useState<string>();
 	// True while a file is dragged over the drop zone
@@ -194,6 +197,26 @@ export default function UploadForm({
 		return () => { document.removeEventListener('paste', onPaste); };
 	}, [hidden]);
 
+	// Fills the transcription box from a .txt, as Save the text writes them
+	const loadTranscription = async (file: File | undefined) => {
+		if (!file) return;
+		let text: string;
+		try {
+			text = transcriptionFromText(await file.text());
+		} catch {
+			onError('Couldn\'t read that file.');
+			return;
+		}
+		if (!text.trim()) {
+			onError('That file has no text to compare with.');
+			return;
+		}
+		onError(undefined);
+		setUploadLabel(text);
+		setShowTranscription(true);
+	};
+	const transcriptionLines = uploadLabel.split('\n').filter((line) => line.trim()).length;
+
 	const onSubmit = (event: React.FormEvent) => {
 		event.preventDefault();
 		if (!upload) return;
@@ -209,7 +232,8 @@ export default function UploadForm({
 			hidden={hidden}
 			onSubmit={onSubmit}
 		>
-			<div className={styles.inputs}>
+			<div className={[styles.inputs, !showTranscription && styles.oneColumn]
+				.filter(Boolean).join(' ')}>
 			<div className={styles.field}>
 			<span id="upload-title">Upload an image of a single page, or a PDF</span>
 			<div
@@ -280,24 +304,55 @@ export default function UploadForm({
 				</div>
 			</div>
 			</div>
-			<div className={styles.field}>
-				<label htmlFor="upload-abkai">
-					[Optional] Abkai transcription for comparison:
-				</label>
-				<span id="upload-abkai-hint" className={styles.hint}>
-					A line per column, words separated by spaces. For a PDF, separate
-					pages with an empty line.
-
-				</span>
-				<textarea
-					id="upload-abkai"
-					aria-describedby="upload-abkai-hint"
-					value={uploadLabel}
-					rows={4}
-					placeholder={'abka na\nbe\n\nmuke'}
-					onChange={(event) => { setUploadLabel(event.target.value); }}
-				/>
-			</div>
+			<details
+				className={styles.transcription}
+				open={showTranscription}
+				onToggle={(event) => { setShowTranscription(event.currentTarget.open); }}
+			>
+				<summary>
+					Compare with a transcription
+					<span className={styles.hint}>
+						{transcriptionLines
+							? ` · ${transcriptionLines} ${transcriptionLines === 1 ? 'line' : 'lines'} entered`
+							: ' (optional)'}
+					</span>
+				</summary>
+				<div className={styles.field}>
+					<label htmlFor="upload-abkai">The text in Abkai</label>
+					<span id="upload-abkai-hint" className={styles.hint}>
+						A line per column, words separated by spaces. For a PDF, separate
+						pages with an empty line. Or load a .txt saved with Save the text.
+					</span>
+					<textarea
+						id="upload-abkai"
+						aria-describedby="upload-abkai-hint"
+						value={uploadLabel}
+						rows={4}
+						placeholder={'abka na\nbe\n\nmuke'}
+						onChange={(event) => { setUploadLabel(event.target.value); }}
+					/>
+					<div className={styles.transcriptionActions}>
+						<label className={styles.chooseButton}>
+							Load from a .txt…
+							<input
+								type="file"
+								accept=".txt,text/plain"
+								className={styles.visuallyHidden}
+								onChange={(event) => {
+									loadTranscription(event.target.files?.[0]);
+									// So loading the same file again still counts
+									event.target.value = '';
+								}}
+							/>
+						</label>
+						{uploadLabel && (
+							<button type="button" onClick={() => { setUploadLabel(''); }}>
+								Clear
+							</button>
+						)}
+					</div>
+				</div>
+			</details>
 			</div>
 			<div className={styles.submitRow}>
 				<button type="submit" disabled={disabled || !upload}>
