@@ -18,7 +18,7 @@ export const metadata: Metadata = {
   // Makes the Open Graph image's URL absolute
   metadataBase: new URL(SITE_URL),
   title: "Dots and Circles",
-  description: "Manchu OCR from scratch.",
+  description: "Read printed Manchu with OCR. Upload a page or a PDF and get its text in Manchu script and Abkai romanization, check words flagged against Manchu dictionaries, and save it as text.",
 };
 
 export default function RootLayout({
