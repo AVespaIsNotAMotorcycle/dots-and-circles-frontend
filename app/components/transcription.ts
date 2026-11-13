@@ -1,10 +1,11 @@
 // Reads a transcription to compare with from a .txt in the format Save the
-// text writes: a line per column; Manchu, Abkai or both (Manchu, then
-// Abkai, a blank line apart); and for a PDF, each page under a "Page n"
-// heading. Gives the Abkai, as the transcription box has it: a paragraph
-// per page, a line per column.
+// text writes: a line per column; Manchu, a romanization (Abkai or Norman)
+// or both (Manchu, then the romanization, a blank line apart); and for a
+// PDF, each page under a "Page n" heading. Gives the Abkai, as the
+// transcription box has it, since that's what's compared: a paragraph per
+// page, a line per column.
 
-import { romanize } from './romanization';
+import { romanize, toManchu } from './romanization';
 
 const MANCHU = /[᠀-᢯]/;
 const HEADING = /^Page (\d+)$/;
@@ -14,21 +15,37 @@ const UNREAD = '(This page couldn\'t be read.)';
 // keep their places (an empty paragraph would be dropped)
 export const EMPTY_PAGE = '□';
 
+// Letters only Norman has, to tell its text from Abkai's
+const NORMAN = /[ūšž]/i;
+
 // Manchu written in Abkai, word by word, keeping □ for other text
 const toAbkai = (block: string) => block.split('\n')
 	.map((line) => line.split(/\s+/).filter(Boolean)
 		.map((word) => (word === '□' ? word : romanize(word, 'abkai'))).join(' '))
 	.join('\n');
 
-// The Abkai of some of the file: its Abkai blocks if it has any (leaving
-// out the Manchu, which says the same), or else its Manchu in Abkai.
-// Blocks are kept apart by a blank line, as they may be pages.
+// Norman written in Abkai, by way of the Manchu, word by word. A word with
+// a letter Norman doesn't have is kept as it is.
+const normanToAbkai = (block: string) => block.split('\n')
+	.map((line) => line.split(/\s+/).filter(Boolean)
+		.map((word) => {
+			const manchu = word === '□' ? undefined : toManchu(word, 'norman');
+			return manchu === undefined ? word : romanize(manchu, 'abkai');
+		}).join(' '))
+	.join('\n');
+
+// The Abkai of some of the file: its Manchu blocks in Abkai if it has any
+// (exact, whichever romanization is beside them), or else its romanized
+// blocks, Norman ones (with ū, š or ž) turned into Abkai. Blocks are kept
+// apart by a blank line, as they may be pages.
 function abkaiOf(text: string) {
 	const blocks = text.split(/\n\s*\n/)
 		.map((block) => block.trim())
 		.filter((block) => block && block !== UNREAD);
-	const abkai = blocks.filter((block) => !MANCHU.test(block));
-	return (abkai.length ? abkai : blocks.map(toAbkai)).join('\n\n');
+	const manchu = blocks.filter((block) => MANCHU.test(block));
+	if (manchu.length) return manchu.map(toAbkai).join('\n\n');
+	const norman = blocks.some((block) => NORMAN.test(block));
+	return (norman ? blocks.map(normanToAbkai) : blocks).join('\n\n');
 }
 
 export function transcriptionFromText(file: string) {

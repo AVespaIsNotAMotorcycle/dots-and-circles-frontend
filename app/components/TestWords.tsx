@@ -5,6 +5,9 @@ import { useEffect, useRef, useState } from 'react';
 
 import LoadingCard from './LoadingCard';
 import { alignWords, pageWords, wordLetters } from './pagecompare';
+import { romanizeText } from './romanization';
+import type { Romanization } from './romanization';
+import { useRomanization } from './RomanizationContext';
 import Switch from './Switch';
 import styles from './testwords.module.css';
 import type { ErrorResponse, Lexigraph, LexigraphPage, Source } from './types';
@@ -32,20 +35,32 @@ type WordSet = { words: Lexigraph[]; total?: number; error?: string };
 const percent = (value: number) => value
 	.toLocaleString(undefined, { style: 'percent', maximumFractionDigits: 1 });
 
-// One word: its image, its label, and the model's reading lined up with it
+// A test word's label and the model's reading of it, in a romanization:
+// Norman as the server sends it, or (from a server from before it did)
+// romanized here from the Manchu, which comes out the same
+const wordIn = (word: Lexigraph, romanization: Romanization) => (romanization === 'abkai'
+	? { label: word.label, reading: word['prediction-abkai'] }
+	: {
+		label: word['label-norman'] ?? romanizeText(word.manchu, 'norman'),
+		reading: word['prediction-norman'] ?? romanizeText(word['prediction-manchu'], 'norman'),
+	});
+
+// One word: its image, its label, and the model's reading lined up with it,
+// in the romanization chosen for the site
 function WordCard({ word }: { word: Lexigraph }) {
+	const [romanization] = useRomanization();
+	const { label, reading } = wordIn(word, romanization);
 	const right = word.score === 1;
-	const aligned = alignWords(pageWords(word['prediction-abkai']),
-		pageWords(word.label));
+	const aligned = alignWords(pageWords(reading), pageWords(label));
 
 	return (
 		<li className={styles.card}>
-			<img src={word.image} alt={`The word ${word.label}`} />
+			<img src={word.image} alt={`The word ${label}`} />
 			<div className={styles.text}>
 				<span className={styles.caption}>Word</span>
-				<span className={styles.label}>{word.label}</span>
+				<span className={styles.label}>{label}</span>
 				<span className={styles.caption}>Read as</span>
-				<span className={styles.reading} aria-label={word['prediction-abkai'] || 'nothing'}>
+				<span className={styles.reading} aria-label={reading || 'nothing'}>
 					{aligned.map((part, key) => (
 						<span key={key}>
 							{wordLetters(part).map(({ letter, status }, index) => (

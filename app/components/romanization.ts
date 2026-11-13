@@ -27,8 +27,8 @@ const SHARED: Record<string, string> = {
 // two agree.
 const ABKAI_QUOTE = '‘';
 const ABKAI_MARK = 'ʻ';
-// Norman marks them with ’ (U+2019)
-const NORMAN_MARK = '’';
+// Norman marks them with ', as the backend's manchu_to_norman does
+const NORMAN_MARK = "'";
 
 const LETTERS: Record<Romanization, Record<string, string>> = {
 	abkai: {
@@ -101,43 +101,64 @@ export function romanize(manchu: string, romanization: Romanization): string {
 export const INVISIBLE = new Set(Object.keys(SHARED)
 	.filter((letter) => SHARED[letter] === ''));
 
-// Typed Abkai -> Manchu, as the backend's abkai_to_manchu (ocr/photos.py)
-// has it: each spelling's first letter in the table (so i is ᡳ, not ᠢ, and
-// q is ᠴ, not ᡱ), the whole syllables, and the comma and full stop. Every
-// mark is read as ʻ, since people type them in many ways.
+// Typed romanization -> Manchu: for Abkai, as the backend's
+// abkai_to_manchu (ocr/photos.py) has it. Each spelling is the first
+// letter in the table that has it (so i is ᡳ, not ᠢ, and Abkai q is ᠴ, not
+// ᡱ), and the whole syllables where they're spelled apart from their
+// letters; Norman spells some (ts, dz) as one of their letters alone, and
+// those are read as that letter. People type the marks in many ways, so any
+// of them is read as the romanization's own.
 const TYPED_MARKS = /['’‘ʻ]/g;
-const ABKAI_TO_MANCHU: Record<string, string> = (() => {
+const OWN_MARK: Record<Romanization, string> = { abkai: ABKAI_MARK, norman: NORMAN_MARK };
+const TO_MANCHU: Record<Romanization, Record<string, string>> = {
+	abkai: typedTable('abkai'),
+	norman: typedTable('norman'),
+};
+function typedTable(romanization: Romanization) {
 	const table: Record<string, string> = {};
-	for (const [letter, spelling] of Object.entries(LETTERS.abkai)) {
-		const typed = spelling.replace(TYPED_MARKS, ABKAI_MARK);
-		if (typed && !(typed in table)) table[typed] = letter;
+	const typed = (spelling: string) => spelling.replace(TYPED_MARKS, OWN_MARK[romanization]);
+	for (const [letter, spelling] of Object.entries(LETTERS[romanization])) {
+		if (spelling && !(typed(spelling) in table)) table[typed(spelling)] = letter;
 	}
-	for (const [syllable, spellings] of Object.entries(PAIRS.abkai)) {
-		table[spellings.join('').replace(TYPED_MARKS, ABKAI_MARK)] = syllable;
+	for (const [syllable, spellings] of Object.entries(PAIRS[romanization])) {
+		const spelling = typed(spellings.join(''));
+		if (!(spelling in table)) table[spelling] = syllable;
 	}
 	return table;
-})();
-const LONGEST_SPELLING = Math.max(...Object.keys(ABKAI_TO_MANCHU).map((s) => s.length));
+}
 
-// Words typed in Abkai, in Manchu script, reading the longest spelling it
-// can at each step (so ng is ᠩ), e.g. aqambi -> ᠠᠴᠠᠮᠪᡳ. Any of ' ’ ‘ ʻ
-// marks a loanword letter. Undefined if a letter has no Manchu.
-export function abkaiToManchu(text: string): string | undefined {
+// Words typed in a romanization, in Manchu script, reading the longest
+// spelling it can at each step (so ng is ᠩ), e.g. aqambi (Abkai) or
+// acambi (Norman) -> ᠠᠴᠠᠮᠪᡳ. Any of ' ’ ‘ ʻ marks a loanword letter.
+// Undefined if a letter has no Manchu.
+export function toManchu(text: string, romanization: Romanization): string | undefined {
+	const table = TO_MANCHU[romanization];
+	const longest = Math.max(...Object.keys(table).map((spelling) => spelling.length));
 	const typed = text.trim().toLowerCase().replace(/\s+/g, ' ')
-		.replace(TYPED_MARKS, ABKAI_MARK);
+		.replace(TYPED_MARKS, OWN_MARK[romanization]);
 	let manchu = '';
 	let position = 0;
 	while (position < typed.length) {
-		let length = LONGEST_SPELLING;
-		while (length > 0 && !(typed.slice(position, position + length) in ABKAI_TO_MANCHU)) {
+		let length = longest;
+		while (length > 0 && !(typed.slice(position, position + length) in table)) {
 			length--;
 		}
 		if (!length) return undefined;
-		manchu += ABKAI_TO_MANCHU[typed.slice(position, position + length)];
+		manchu += table[typed.slice(position, position + length)];
 		position += length;
 	}
 	return manchu;
 }
+
+export const abkaiToManchu = (text: string) => toManchu(text, 'abkai');
+
+// Manchu words in a romanization, a word at a time, keeping the □ that
+// stands for other text and the lines
+export const romanizeText = (manchu: string, romanization: Romanization) => manchu
+	.split('\n')
+	.map((line) => line.split(' ')
+		.map((word) => (word === '□' || !word ? word : romanize(word, romanization))).join(' '))
+	.join('\n');
 
 // Typed Abkai in the standard form, with ‘ after k, g and h and ʻ
 // elsewhere, as the server writes it, e.g. k'a -> k‘a

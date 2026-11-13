@@ -578,3 +578,11 @@ button.choice:has(.shortcut) {
 .legendCorrected {
 	background: #0d9488;
 }
+
+/* A typed reading in Norman, when that's what the page is shown in */
+.typedNorman {
+	align-self: center;
+	color: grey;
+	font-size: .875rem;
+	white-space: nowrap;
+}

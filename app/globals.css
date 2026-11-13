@@ -96,16 +96,24 @@ header {
 	margin-bottom: 3rem;
 	box-shadow: rgba(0, 0, 0, 0.2) 0px 5px 5px;
 }
+/* The pages on the left, the tools on the right, which go to a row of their
+   own on a phone */
 header nav {
 	max-width: 80rem;
 	margin-inline: auto;
+	display: flex;
+	flex-wrap: wrap;
+	/* Lined up at the top, as the links have room below for the current
+	   page's underline */
+	align-items: flex-start;
+	gap: .75rem 2rem;
 }
-
 header nav ul {
 	display: flex;
 	gap: 2rem;
 }
 header nav a {
+	white-space: nowrap;
 	border-bottom: 5px solid transparent;
 	transition-property: border-color;
 	padding-bottom: 1rem;
@@ -116,9 +124,35 @@ header nav a:hover,
 header nav a[aria-current="page"] {
 	border-color: black;
 }
-/* The link off the site sits apart, on the right */
-header nav li.github {
+/* The romanization and the link off the site */
+header nav .tools {
+	display: flex;
+	align-items: flex-start;
+	gap: 2rem;
 	margin-left: auto;
+}
+/* Abkai or Norman, as two halves of one switch, level with the links' text */
+header nav .romanization {
+	display: flex;
+	margin-top: .125em;
+}
+header nav .romanization button {
+	padding: .125rem .625rem;
+	border-width: 1px;
+	font-size: .875rem;
+	color: var(--foreground);
+}
+header nav .romanization button:first-child {
+	border-radius: 5px 0 0 5px;
+}
+header nav .romanization button:last-child {
+	border-left-width: 0;
+	border-radius: 0 5px 5px 0;
+}
+header nav .romanization button[aria-pressed="true"] {
+	background: var(--accent);
+	border-color: var(--accent);
+	color: white;
 }
 @media (max-width: 479.98px) {
 	header {
@@ -126,8 +160,13 @@ header nav li.github {
 		font-size: 1.125rem;
 		margin-bottom: 1rem;
 	}
-	header nav ul {
+	header nav ul,
+	header nav .tools {
 		gap: 1rem;
+	}
+	/* Room for the current page's underline above the tools' row */
+	header nav {
+		row-gap: 1.75rem;
 	}
 }
 

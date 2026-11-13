@@ -16,6 +16,10 @@ export type Lexigraph = {
 	image: string;
 	'prediction-manchu': string;
 	'prediction-abkai': string;
+	// The label and reading in Norman's romanization; missing from a server
+	// from before it sent them
+	'label-norman'?: string;
+	'prediction-norman'?: string;
 	// Character accuracy against the label, from 0 to 1
 	score: number;
 };
@@ -40,6 +44,8 @@ export type ErrorResponse = { error: string };
 export type ClosestWord = {
 	manchu: string;
 	abkai: string;
+	// Missing from a server from before it sent Norman
+	norman?: string;
 	// The edit distance from the reading, ignoring its punctuation
 	distance: number;
 	// The dictionaries listing it: Wiktionary and Norman's
@@ -65,6 +71,8 @@ export type PageBox = {
 	// The model's reading, null for other boxes
 	'prediction-manchu': string | null;
 	'prediction-abkai': string | null;
+	// In Norman's romanization; missing from a server from before it sent it
+	'prediction-norman'?: string | null;
 	confidence: number | null;
 	// True for Manchu read with too little confidence to be in the page's
 	// text, null for other boxes
@@ -88,6 +96,9 @@ export type Page = {
 	// spaces and □ for each box of other text
 	manchu: string;
 	abkai: string;
+	// The same in Norman's romanization; missing from a server from before
+	// it sent it
+	norman?: string;
 	// In reading order
 	boxes: PageBox[];
 };

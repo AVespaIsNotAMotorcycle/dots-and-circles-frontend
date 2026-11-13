@@ -2,12 +2,15 @@ import { useEffect, useId, useRef, useState } from 'react';
 
 import BoxEditor from './BoxEditor';
 import type { BoxStatus } from './BoxEditor';
-import { NOT_MANCHU, boxKey, textLines } from './corrections';
-import type { TextWord } from './corrections';
+import {
+	NOT_MANCHU, boxKey, boxReading, closestReading, correctionReading, textLines,
+} from './corrections';
+import type { Script, TextWord } from './corrections';
 import {
 	alignWords, boxStatuses, flaggedBoxes, pageWords, wordLetters, wordsRight,
 } from './pagecompare';
-import { abkaiToManchu, standardAbkai } from './romanization';
+import { ROMANIZATION_NAMES, abkaiToManchu, romanizeText, standardAbkai } from './romanization';
+import { useRomanization } from './RomanizationContext';
 import type {
 	ClosestWord, Confirmed, Correction, Corrections, EditedBox, Page, PageBox, SamplePage,
 } from './types';
@@ -32,9 +35,11 @@ const percent = (value: number) => value
 // The Abkai expected, if any, compared letter by letter with the page's
 // reading. Words are lined up first, then the letters within them. A random
 // page has its transcription and the server's score.
-function Comparison({ abkai, expected, transcription, score, corrected }: {
+function Comparison({ abkai, expected, transcription, score, corrected, inNorman }: {
 	abkai: string;
 	expected: string;
+	// Whether the page is shown in Norman, though this compares in Abkai
+	inNorman: boolean;
 	// Whether the user has corrected any of the page's readings, which this
 	// leaves out: it scores the model
 	corrected: boolean;
@@ -55,6 +60,7 @@ function Comparison({ abkai, expected, transcription, score, corrected }: {
 				Red letters are wrong, letters with a wavy line are extra, and faint
 				letters are missing.
 				{corrected && ' This compares the model\'s reading, not your corrections.'}
+				{inNorman && ' It compares in Abkai, as the transcription is written.'}
 			</p>
 			<p className={styles.diff}>
 				{aligned.map((word, key) => (
@@ -117,10 +123,11 @@ function BoxOutline({
 	const unsure = manchu && Boolean(box['low-confidence']);
 	const verdict = status === 'right' ? ', read right'
 		: status === 'wrong' ? ', read wrong' : '';
-	const read = box['prediction-abkai'] ?? '';
+	const [romanization] = useRomanization();
+	const read = boxReading(box, romanization);
 	// Marked by the user as not Manchu, it's drawn as other text
 	const notManchu = Boolean(correction?.notManchu);
-	const reading = notManchu ? '' : correction?.abkai ?? read;
+	const reading = notManchu ? '' : correction ? correctionReading(correction, romanization) : read;
 	// Written top to bottom, as wide as the box allows, but no longer than it
 	const fontSize = Math.min(box.w * 0.6,
 		(box.h * 0.9) / Math.max(reading.length * 0.6, 1));
@@ -136,7 +143,7 @@ function BoxOutline({
 			role="button"
 			tabIndex={0}
 			aria-label={manchu
-				? `Manchu word read as ${read}${unsure ? ', with low confidence' : verdict}${notManchu ? ', marked as not Manchu' : correction ? `, corrected to ${correction.abkai}` : suggests ? ', with close dictionary words' : ''}`
+				? `Manchu word read as ${read}${unsure ? ', with low confidence' : verdict}${notManchu ? ', marked as not Manchu' : correction ? `, corrected to ${reading}` : suggests ? ', with close dictionary words' : ''}`
 				: 'Other text'}
 			onClick={onOpen}
 			onKeyDown={(event) => {
@@ -168,19 +175,20 @@ function BoxOutline({
 	);
 }
 
-// One reading a box could have, as a card: in Manchu and Abkai, with a
+// One reading a box could have, as a card: in Manchu and romanized, with a
 // line or two about it. The current one is marked; another, with onPick, is
 // a button that makes it the reading, action saying how.
 type ChoiceProps = {
 	manchu: string;
-	abkai: string;
+	// Romanized, as the user has chosen
+	reading: string;
 	details: string[];
 	current: boolean;
 	action?: string;
 	onPick?: () => void;
 };
 
-function Choice({ manchu, abkai, details, current, action, onPick, shortcut }: ChoiceProps & {
+function Choice({ manchu, reading, details, current, action, onPick, shortcut }: ChoiceProps & {
 	// The number key that picks it, if any
 	shortcut?: number;
 }) {
@@ -188,7 +196,7 @@ function Choice({ manchu, abkai, details, current, action, onPick, shortcut }: C
 		<>
 			<span className={styles.choiceManchu} aria-hidden="true">{manchu}</span>
 			<span className={styles.choiceText}>
-				<span className={styles.choiceWord}>{abkai}</span>
+				<span className={styles.choiceWord}>{reading}</span>
 				{details.map((detail) => (
 					<span key={detail} className={styles.choiceDetail}>{detail}</span>
 				))}
@@ -287,6 +295,7 @@ function TypeReading({ box, inputRef, onCorrect }: {
 	onCorrect: (correction?: Correction) => void;
 }) {
 	const [typed, setTyped] = useState('');
+	const [romanization] = useRomanization();
 	const manchu = typed.trim() ? abkaiToManchu(typed) : undefined;
 	const invalid = Boolean(typed.trim()) && !manchu;
 	// Unique on the page, which may have a close-up for each of a PDF's pages
@@ -320,6 +329,9 @@ function TypeReading({ box, inputRef, onCorrect }: {
 				/>
 				<button type="submit" disabled={!manchu}>Use</button>
 				{manchu && <span className={styles.typedManchu} aria-hidden="true">{manchu}</span>}
+				{manchu && romanization === 'norman' && (
+					<span className={styles.typedNorman}>{`Norman: ${romanizeText(manchu, 'norman')}`}</span>
+				)}
 			</div>
 			<span id={`${id}-hint`} className={invalid ? styles.error : styles.hint}>
 				{invalid
@@ -352,6 +364,7 @@ function BoxDialog({
 	onClose: () => void;
 }) {
 	const dialog = useRef<HTMLDialogElement>(null);
+	const [romanization] = useRomanization();
 	// Unique on the page, which may have one for each of a PDF's pages
 	const titleId = useId();
 	const typeBox = useRef<HTMLInputElement>(null);
@@ -407,7 +420,7 @@ function BoxDialog({
 			</>
 		);
 	} else if (box) {
-		const read = box['prediction-abkai'] ?? '';
+		const read = boxReading(box, romanization);
 		const notManchu = Boolean(correction?.notManchu);
 		const closest = box['closest-words'] ?? [];
 		const sources = (word: ClosestWord) => word.sources
@@ -422,7 +435,7 @@ function BoxDialog({
 			{
 				key: 'model',
 				manchu: box['prediction-manchu'] ?? '',
-				abkai: read,
+				reading: read,
 				details: [
 					'The model\'s reading',
 					entry ? `In ${sources(entry)}` : closest.length ? 'Not in the dictionaries' : '',
@@ -437,7 +450,7 @@ function BoxDialog({
 			...others.map((word) => ({
 				key: word.abkai,
 				manchu: word.manchu,
-				abkai: word.abkai,
+				reading: closestReading(word, romanization),
 				details: [
 					`${word.distance} ${word.distance === 1 ? 'change' : 'changes'} from the reading`,
 					sources(word),
@@ -449,7 +462,7 @@ function BoxDialog({
 			...(typed ? [{
 				key: 'typed',
 				manchu: typed.manchu,
-				abkai: typed.abkai,
+				reading: correctionReading(typed, romanization),
 				details: ['Your own reading'],
 				current: true,
 			}] : []),
@@ -596,6 +609,7 @@ function PageImage({
 	};
 }) {
 	const size = useImageSize(page.image);
+	const [romanization] = useRomanization();
 	const svg = useRef<SVGSVGElement>(null);
 	const scale = useImageScale(svg, size?.w);
 
@@ -607,8 +621,12 @@ function PageImage({
 		// Coloured as outside the editor, so the boxes read wrong stay marked
 		const editStatuses = page.boxes.map((box, index): BoxStatus => (
 			box['low-confidence'] ? 'lowConfidence' : statuses[index] ?? 'unchecked'));
-		// Labelled with the user's words, as outside the editor
-		const labels = page.boxes.map((box) => corrections[boxKey(box)]?.abkai);
+		// Labelled as outside the editor: in the chosen romanization, with the
+		// user's words
+		const labels = page.boxes.map((box) => {
+			const correction = corrections[boxKey(box)];
+			return correction ? correctionReading(correction, romanization) : boxReading(box, romanization);
+		});
 		return (
 			<BoxEditor
 				page={page}
@@ -665,7 +683,7 @@ function PageText({
 	suggests: boolean[];
 	// Whether each of the page's boxes was corrected
 	corrected: boolean[];
-	script: 'manchu' | 'abkai';
+	script: Script;
 	onOpen: (index: number) => void;
 }) {
 	return (
@@ -791,6 +809,7 @@ export default function PageResult({
 	onBoxClosed?: (ruled: boolean) => void;
 }) {
 	const random = 'transcription' in page ? page : undefined;
+	const [romanization] = useRomanization();
 	// The page whose boxes are being edited, so a new page ends the editing
 	const [editingPage, setEditingPage] = useState<ReadPage>();
 	const editing = editingPage === page;
@@ -914,12 +933,12 @@ export default function PageResult({
 						/>
 					</section>
 					<section>
-						<h4>Abkai</h4>
+						<h4>{ROMANIZATION_NAMES[romanization]}</h4>
 						<PageText
-							lines={textLines(page, corrections, 'abkai')}
+							lines={textLines(page, corrections, romanization)}
 							suggests={suggests}
 							corrected={isCorrected}
-							script="abkai"
+							script={romanization}
 							boxId={boxId}
 							onOpen={openBox}
 							{...link}
@@ -961,6 +980,7 @@ export default function PageResult({
 					transcription={Boolean(random)}
 					score={(random as Partial<SamplePage> | undefined)?.score}
 					corrected={corrected > 0}
+					inNorman={romanization === 'norman'}
 				/>
 			)}
 		</section>
