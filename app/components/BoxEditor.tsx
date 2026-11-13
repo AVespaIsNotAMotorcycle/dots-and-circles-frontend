@@ -3,6 +3,7 @@ import { useRef, useState } from 'react';
 import type { EditedBox, Page } from './types';
 import styles from './boxeditor.module.css';
 import useImageScale from './useImageScale';
+import ZoomFrame from './ZoomFrame';
 
 // The tallest a box can be drawn or resized to, as a multiple of its width
 export const MAX_ASPECT = 8;
@@ -403,7 +404,9 @@ export default function BoxEditor({
 					</button>
 				</div>
 			</div>
-			<div className={styles.canvasWrap}>
+			<ZoomFrame width={size.w}>
+			{(zoomStyle) => (
+			<div className={styles.canvasWrap} style={zoomStyle}>
 			<svg
 				ref={svg}
 				className={[styles.canvas, busy && styles.busy].filter(Boolean).join(' ')}
@@ -481,6 +484,8 @@ export default function BoxEditor({
 				<Loupe image={page.image} size={size} boxes={boxes} scale={scale} {...magnified} />
 			)}
 			</div>
+			)}
+			</ZoomFrame>
 			<div className={styles.actions}>
 				<button type="button" disabled={busy} onClick={() => { onSubmit(boxes.map(toSend)); }}>
 					{busy ? 'Reading…' : 'Read These Boxes'}

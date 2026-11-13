@@ -139,8 +139,11 @@
 /* Holds the page, so the magnifier can be placed over it */
 .canvasWrap {
 	position: relative;
-	width: fit-content;
-	max-width: 100%;
+}
+/* As wide as the frame's zoom makes its holder */
+.canvasWrap > .canvas {
+	width: 100%;
+	max-width: none;
 }
 
 /* The magnifier shown while drawing or resizing a box */

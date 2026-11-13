@@ -1,0 +1,48 @@
+.zoom {
+	display: flex;
+	flex-direction: column;
+	gap: .375rem;
+	min-width: 0;
+}
+.controls {
+	display: flex;
+	align-items: center;
+	gap: .25rem;
+}
+.controls button {
+	min-width: 2rem;
+	padding: .125rem .5rem;
+	border-width: 1px;
+	font-weight: 700;
+	line-height: 1.5;
+}
+.controls button:disabled {
+	opacity: .4;
+	pointer-events: none;
+}
+/* The zoom level, which fits it again */
+.controls .level {
+	min-width: 3.5rem;
+	font-weight: 600;
+	font-variant-numeric: tabular-nums;
+}
+.hint {
+	margin-left: .5rem;
+	color: grey;
+	font-size: .8125rem;
+}
+@media (hover: none) {
+	.hint {
+		display: none;
+	}
+}
+.frame {
+	min-width: 0;
+}
+/* Zoomed in, the page is panned by scrolling within the frame */
+.zoomed {
+	overflow: auto;
+	max-height: 85svh;
+	border-radius: 5px;
+	outline: 1px solid #ddd;
+}

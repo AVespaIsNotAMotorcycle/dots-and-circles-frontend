@@ -12,6 +12,7 @@ import type {
 	ClosestWord, Confirmed, Correction, Corrections, EditedBox, Page, PageBox, SamplePage,
 } from './types';
 import useImageScale from './useImageScale';
+import ZoomFrame from './ZoomFrame';
 import styles from './pageresult.module.css';
 
 // How the page was turned to straighten it, or undefined if it barely was
@@ -619,10 +620,12 @@ function PageImage({
 		);
 	}
 	return (
-		<>
+		<ZoomFrame width={size.w}>
+			{(zoomStyle) => (
 			<svg
 				ref={svg}
 				className={styles.pageImage}
+				style={zoomStyle}
 				width={size.w}
 				height={size.h}
 				viewBox={`0 0 ${size.w} ${size.h}`}
@@ -645,7 +648,8 @@ function PageImage({
 					/>
 				))}
 			</svg>
-		</>
+			)}
+		</ZoomFrame>
 	);
 }
 
