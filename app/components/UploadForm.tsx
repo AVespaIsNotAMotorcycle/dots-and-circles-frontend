@@ -323,7 +323,7 @@ export default function UploadForm({
 					<label htmlFor="upload-abkai">The text in Abkai</label>
 					<span id="upload-abkai-hint" className={styles.hint}>
 						A line per column, words separated by spaces. For a PDF, separate
-						pages with an empty line. Or load a .txt saved with Save the text.
+						pages with an empty line. Or load a .txt saved from a reading here.
 					</span>
 					<textarea
 						id="upload-abkai"

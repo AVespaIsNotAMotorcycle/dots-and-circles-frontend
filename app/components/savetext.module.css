@@ -51,3 +51,15 @@
 	color: grey;
 	font-size: .875rem;
 }
+
+/* How the last copy went, for a moment */
+.copied, .failed {
+	align-self: center;
+	font-size: .875rem;
+}
+.copied {
+	color: green;
+}
+.failed {
+	color: red;
+}

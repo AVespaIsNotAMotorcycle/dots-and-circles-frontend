@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 
 import { pageText } from './corrections';
 import { ROMANIZATION_NAMES } from './romanization';
@@ -55,7 +55,23 @@ export default function SaveText({ readings, name }: {
 	const [script, setScript] = useState<Script>('both');
 	const [withOther, setWithOther] = useState(true);
 	const [romanization] = useRomanization();
+	// How the last copy went, shown for a moment beside the button
+	const [copied, setCopied] = useState<'copied' | 'failed'>();
+	useEffect(() => {
+		if (!copied) return;
+		const timer = setTimeout(() => { setCopied(undefined); }, 2500);
+		return () => { clearTimeout(timer); };
+	}, [copied]);
 	if (!readings.some(({ result }) => result)) return null;
+	const text = () => readingText(readings, script, romanization, withOther);
+	const copy = async () => {
+		try {
+			await navigator.clipboard.writeText(text());
+			setCopied('copied');
+		} catch {
+			setCopied('failed');
+		}
+	};
 	const scriptOptions: { value: Script; label: string }[] = [
 		{ value: 'manchu', label: 'Manchu' },
 		{ value: 'romanized', label: ROMANIZATION_NAMES[romanization] },
@@ -66,7 +82,7 @@ export default function SaveText({ readings, name }: {
 
 	return (
 		<section className={styles.save} aria-labelledby="save-text-title">
-			<h3 id="save-text-title">Save the text</h3>
+			<h3 id="save-text-title">Save or copy the text</h3>
 			<div className={styles.options}>
 				<fieldset>
 					<legend>Script</legend>
@@ -105,12 +121,17 @@ export default function SaveText({ readings, name }: {
 				</fieldset>
 				<button
 					type="button"
-					onClick={() => {
-						download(readingText(readings, script, romanization, withOther), `${name}${suffix}.txt`);
-					}}
+					onClick={() => { download(text(), `${name}${suffix}.txt`); }}
 				>
 					Save as .txt
 				</button>
+				<button type="button" onClick={copy}>
+					Copy
+				</button>
+				<span className={copied === 'failed' ? styles.failed : styles.copied} role="status">
+					{copied === 'copied' && '✓ Copied'}
+					{copied === 'failed' && 'Couldn\'t copy: try Save as .txt'}
+				</span>
 			</div>
 			<p className={styles.hint}>
 				A line per column, with your corrections.
