@@ -479,3 +479,46 @@ button.choice:focus-visible {
 	background: #0d9488;
 }
 
+
+/* The key that picks a card, or does a footer button's job, and the keys
+   in the footer: only where there's likely a keyboard */
+.choice {
+	position: relative;
+}
+.shortcut, .footerKey, .keys kbd {
+	font-family: inherit;
+	font-size: .75rem;
+	font-weight: 700;
+	line-height: 1;
+	padding: .125rem .3rem;
+	border: 1px solid #c4c4c4;
+	border-bottom-width: 2px;
+	border-radius: 4px;
+	background: #f7f7f7;
+	color: #555;
+}
+.shortcut {
+	position: absolute;
+	top: .375rem;
+	right: .375rem;
+}
+/* Room for it, so a long word doesn't run under it */
+button.choice:has(.shortcut) {
+	padding-right: 2rem;
+}
+.footerKey {
+	margin-left: .5rem;
+}
+.keys {
+	color: grey;
+	font-size: .8125rem;
+	text-align: center;
+}
+@media (hover: none) {
+	.shortcut, .footerKey, .keys {
+		display: none;
+	}
+	button.choice:has(.shortcut) {
+		padding-right: .625rem;
+	}
+}

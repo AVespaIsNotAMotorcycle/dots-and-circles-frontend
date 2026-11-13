@@ -150,13 +150,18 @@ function BoxOutline({ box, id, status, suggests, correction, badge, onOpen }: {
 // One reading a box could have, as a card: in Manchu and Abkai, with a
 // line or two about it. The current one is marked; another, with onPick, is
 // a button that makes it the reading, action saying how.
-function Choice({ manchu, abkai, details, current, action, onPick }: {
+type ChoiceProps = {
 	manchu: string;
 	abkai: string;
 	details: string[];
 	current: boolean;
 	action?: string;
 	onPick?: () => void;
+};
+
+function Choice({ manchu, abkai, details, current, action, onPick, shortcut }: ChoiceProps & {
+	// The number key that picks it, if any
+	shortcut?: number;
 }) {
 	const content = (
 		<>
@@ -180,8 +185,14 @@ function Choice({ manchu, abkai, details, current, action, onPick }: {
 					{content}
 				</div>
 			) : (
-				<button type="button" className={styles.choice} onClick={onPick}>
+				<button
+					type="button"
+					className={styles.choice}
+					aria-keyshortcuts={shortcut ? String(shortcut) : undefined}
+					onClick={onPick}
+				>
 					{content}
+					{shortcut && <kbd className={styles.shortcut} aria-hidden="true">{shortcut}</kbd>}
 				</button>
 			)}
 		</li>
@@ -248,8 +259,10 @@ function BoxCrop({ box, page }: {
 
 // The box's reading as the user would have it, typed in Abkai and shown in
 // Manchu as they type
-function TypeReading({ box, onCorrect }: {
+function TypeReading({ box, inputRef, onCorrect }: {
 	box: PageBox;
+	// Its text box, for the T key to go to
+	inputRef: React.RefObject<HTMLInputElement | null>;
 	onCorrect: (correction?: Correction) => void;
 }) {
 	const [typed, setTyped] = useState('');
@@ -272,8 +285,10 @@ function TypeReading({ box, onCorrect }: {
 			<label htmlFor={id}>Or type your own, in Abkai</label>
 			<div className={styles.typeRow}>
 				<input
+					ref={inputRef}
 					id={id}
 					type="text"
+					aria-keyshortcuts="T"
 					autoComplete="off"
 					autoCapitalize="off"
 					spellCheck={false}
@@ -318,6 +333,11 @@ function BoxDialog({
 	const dialog = useRef<HTMLDialogElement>(null);
 	// Unique on the page, which may have one for each of a PDF's pages
 	const titleId = useId();
+	const typeBox = useRef<HTMLInputElement>(null);
+	// What the keys do in a Manchu box's close-up: a number picks that
+	// card, T goes to the text box, N marks it not Manchu (or takes that
+	// back). Not while typing, nor with Ctrl, Alt or ⌘.
+	let onKey: ((key: string) => boolean) | undefined;
 	const close = useRef<HTMLButtonElement>(null);
 	useEffect(() => {
 		if (box && !dialog.current?.open) {
@@ -377,6 +397,61 @@ function BoxDialog({
 		const typed = correction && !notManchu
 			&& !others.some(({ abkai }) => abkai === correction.abkai) ? correction : undefined;
 		const settled = !flagged || confirmed;
+		const choices: (ChoiceProps & { key: string })[] = [
+			{
+				key: 'model',
+				manchu: box['prediction-manchu'] ?? '',
+				abkai: read,
+				details: [
+					'The model\'s reading',
+					entry ? `In ${sources(entry)}` : closest.length ? 'Not in the dictionaries' : '',
+				].filter(Boolean),
+				current: !correction && settled,
+				action: correction ? 'Go back to it' : 'Mark as right',
+				onPick: () => {
+					if (correction) onCorrect(undefined);
+					else onConfirm(true);
+				},
+			},
+			...others.map((word) => ({
+				key: word.abkai,
+				manchu: word.manchu,
+				abkai: word.abkai,
+				details: [
+					`${word.distance} ${word.distance === 1 ? 'change' : 'changes'} from the reading`,
+					sources(word),
+				],
+				current: correction?.abkai === word.abkai && !notManchu,
+				action: 'Use this',
+				onPick: () => { onCorrect({ manchu: word.manchu, abkai: word.abkai }); },
+			})),
+			...(typed ? [{
+				key: 'typed',
+				manchu: typed.manchu,
+				abkai: typed.abkai,
+				details: ['Your own reading'],
+				current: true,
+			}] : []),
+		];
+		// Numbered in order, leaving out the current one, which can't be picked
+		const numbered = choices.filter(({ current, onPick }) => !current && onPick).slice(0, 9);
+		const toggleNotManchu = () => { onCorrect(notManchu ? undefined : NOT_MANCHU); };
+		onKey = (key) => {
+			const number = Number(key);
+			if (number >= 1 && number <= numbered.length) {
+				numbered[number - 1].onPick?.();
+				return true;
+			}
+			if (key === 't') {
+				typeBox.current?.focus();
+				return true;
+			}
+			if (key === 'n') {
+				toggleNotManchu();
+				return true;
+			}
+			return false;
+		};
 		content = (
 			<>
 				{header(read || '(nothing read)', box.confidence !== null
@@ -411,57 +486,33 @@ function BoxDialog({
 						<section className={styles.choices}>
 							<h5>{flagged && !settled && !correction ? 'Did you mean?' : 'Reading'}</h5>
 							<ul>
-								<Choice
-									manchu={box['prediction-manchu'] ?? ''}
-									abkai={read}
-									details={[
-										'The model\'s reading',
-										entry ? `In ${sources(entry)}` : closest.length ? 'Not in the dictionaries' : '',
-									].filter(Boolean)}
-									current={!correction && settled}
-									action={correction ? 'Go back to it' : 'Mark as right'}
-									onPick={() => {
-										if (correction) onCorrect(undefined);
-										else onConfirm(true);
-									}}
-								/>
-								{others.map((word) => (
-									<Choice
-										key={word.abkai}
-										manchu={word.manchu}
-										abkai={word.abkai}
-										details={[
-											`${word.distance} ${word.distance === 1 ? 'change' : 'changes'} from the reading`,
-											sources(word),
-										]}
-										current={correction?.abkai === word.abkai && !notManchu}
-										action="Use this"
-										onPick={() => { onCorrect({ manchu: word.manchu, abkai: word.abkai }); }}
-									/>
-								))}
-								{typed && (
-									<Choice
-										manchu={typed.manchu}
-										abkai={typed.abkai}
-										details={['Your own reading']}
-										current
-									/>
-								)}
+								{choices.map(({ key, ...choice }) => {
+									const index = numbered.findIndex((one) => one.key === key);
+									return (
+										<Choice
+											key={key}
+											{...choice}
+											shortcut={index >= 0 ? index + 1 : undefined}
+										/>
+									);
+								})}
 							</ul>
 						</section>
-						<TypeReading key={boxKey(box)} box={box} onCorrect={onCorrect} />
+						<TypeReading key={boxKey(box)} box={box} inputRef={typeBox} onCorrect={onCorrect} />
 					</div>
 				</div>
 				<footer className={styles.dialogFooter}>
-					{notManchu ? (
-						<button type="button" onClick={() => { onCorrect(undefined); }}>
-							It&apos;s Manchu after all
-						</button>
-					) : (
-						<button type="button" onClick={() => { onCorrect(NOT_MANCHU); }}>
-							Not Manchu
-						</button>
-					)}
+					<button type="button" aria-keyshortcuts="N" onClick={toggleNotManchu}>
+						{notManchu ? 'It\'s Manchu after all' : 'Not Manchu'}
+						<kbd className={styles.footerKey} aria-hidden="true">N</kbd>
+					</button>
+					<p className={styles.keys} aria-hidden="true">
+						{numbered.length > 0 && <><kbd>{numbered.length > 1 ? `1–${numbered.length}` : '1'}</kbd> choose · </>}
+						<kbd>T</kbd>
+						{' type · '}
+						<kbd>Esc</kbd>
+						{' close'}
+					</p>
 					<button type="button" onClick={onClose}>Close</button>
 				</footer>
 			</>
@@ -473,6 +524,12 @@ function BoxDialog({
 			ref={dialog}
 			className={styles.dialog}
 			aria-labelledby={titleId}
+			onKeyDown={(event) => {
+				const { target } = event;
+				if (event.ctrlKey || event.altKey || event.metaKey
+					|| (target instanceof HTMLElement && target.closest('input, textarea'))) return;
+				if (onKey?.(event.key.toLowerCase())) event.preventDefault();
+			}}
 			// Escape closes it through the box being taken away, as the buttons
 			// do, so the dialog only closes one way
 			onCancel={(event) => {
