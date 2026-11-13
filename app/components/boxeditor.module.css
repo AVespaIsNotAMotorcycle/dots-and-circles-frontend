@@ -146,6 +146,43 @@
 	max-width: none;
 }
 
+/* Delete many, and its menu below it */
+.menuWrap {
+	position: relative;
+}
+.menu {
+	position: absolute;
+	z-index: 2;
+	top: calc(100% + 4px);
+	left: 0;
+	display: flex;
+	flex-direction: column;
+	min-width: 100%;
+	margin: 0;
+	padding: .25rem;
+	list-style: none;
+	background: var(--color-background, white);
+	border: 2px solid var(--color-foreground);
+	border-radius: 5px;
+	box-shadow: rgba(0, 0, 0, .3) 0 4px 12px;
+}
+.menu button {
+	display: flex;
+	justify-content: space-between;
+	gap: 1.5rem;
+	width: 100%;
+	border: none;
+	text-align: start;
+	white-space: nowrap;
+}
+.menu button:hover, .menu button:focus-visible {
+	background: var(--accent-soft, #e8f0fe);
+}
+.menuCount {
+	color: grey;
+	font-variant-numeric: tabular-nums;
+}
+
 /* The selected box's kind and Delete, beside it */
 .tooltip {
 	position: absolute;

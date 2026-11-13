@@ -1,4 +1,4 @@
-import { useCallback, useId, useRef, useState } from 'react';
+import { useCallback, useEffect, useId, useRef, useState } from 'react';
 
 import type { EditedBox, Page } from './types';
 import styles from './boxeditor.module.css';
@@ -212,14 +212,105 @@ function fit(x1: number, y1: number, x2: number, y2: number,
 	return { x: left, y: top, w, h: bottom - top };
 }
 
-// Whether a box is beside Manchu, as a box in a column of Manchu is: it
-// overlaps a Manchu box side to side by at least half the narrower one's
-// width. A box of other text in a column (□ in the text) is; one in the
-// margin, or in a column with no Manchu, isn't.
-const besideManchu = (box: Box, boxes: Box[]) => boxes.some((other) => (
-	other.kind === 'manchu'
+// Manchu read with too little confidence to be in the page's text, and
+// not changed since
+const lowConfidence = (box: Box) => (
+	box.kind === 'manchu' && Boolean(box.reading) && box.status === 'lowConfidence');
+
+// Whether a box is in a column of Manchu: it overlaps another box of
+// Manchu, not read with low confidence, side to side by at least half the
+// narrower one's width. A box of other text in a column (□ in the text)
+// is; one in the margin, or in a column with no Manchu, isn't. Boxes
+// drawn or moved count as Manchu, as they're yet to be read.
+const inColumn = (box: Box, boxes: Box[]) => boxes.some((other) => (
+	other !== box && other.kind === 'manchu' && !lowConfidence(other)
 	&& Math.min(box.x + box.w, other.x + other.w) - Math.max(box.x, other.x)
 		>= Math.min(box.w, other.w) / 2));
+
+const other = (box: Box) => box.kind !== 'manchu';
+
+// The choices of Delete many: which boxes each deletes, given them all
+const DELETE_MANY: { label: string; deletes: (box: Box, boxes: Box[]) => boolean }[] = [
+	{ label: 'All boxes', deletes: () => true },
+	{ label: 'All non-Manchu', deletes: other },
+	{ label: 'Non-Manchu outside of a column', deletes: (box, boxes) => other(box) && !inColumn(box, boxes) },
+	{ label: 'Low confidence', deletes: lowConfidence },
+	{ label: 'All low confidence outside of a column',
+		deletes: (box, boxes) => lowConfidence(box) && !inColumn(box, boxes) },
+	{ label: 'All non-Manchu and low confidence', deletes: (box) => other(box) || lowConfidence(box) },
+	{ label: 'Non-Manchu and low confidence outside of a column',
+		deletes: (box, boxes) => (other(box) || lowConfidence(box)) && !inColumn(box, boxes) },
+];
+
+// A button opening a menu of DELETE_MANY, each with how many boxes it
+// would delete, and disabled if none. Escape or a click elsewhere closes it.
+function DeleteMany({ boxes, disabled, onDelete }: {
+	boxes: Box[];
+	disabled: boolean;
+	onDelete: (deletes: (box: Box, boxes: Box[]) => boolean) => void;
+}) {
+	const [open, setOpen] = useState(false);
+	const wrap = useRef<HTMLDivElement>(null);
+	const button = useRef<HTMLButtonElement>(null);
+	const menuId = useId();
+	useEffect(() => {
+		if (!open) return undefined;
+		const onPointerDown = (event: PointerEvent) => {
+			if (!wrap.current?.contains(event.target as Node)) setOpen(false);
+		};
+		document.addEventListener('pointerdown', onPointerDown);
+		return () => { document.removeEventListener('pointerdown', onPointerDown); };
+	}, [open]);
+	return (
+		<div
+			ref={wrap}
+			className={styles.menuWrap}
+			onKeyDown={(event) => {
+				if (event.key === 'Escape' && open) {
+					event.stopPropagation();
+					setOpen(false);
+					button.current?.focus();
+				}
+			}}
+		>
+			<button
+				ref={button}
+				type="button"
+				disabled={disabled}
+				aria-haspopup="menu"
+				aria-expanded={open}
+				aria-controls={open ? menuId : undefined}
+				onClick={() => { setOpen(!open); }}
+			>
+				Delete many ▾
+			</button>
+			{open && !disabled && (
+				<ul className={styles.menu} id={menuId} role="menu">
+					{DELETE_MANY.map(({ label, deletes }) => {
+						const count = boxes.filter((box) => deletes(box, boxes)).length;
+						return (
+							<li key={label} role="none">
+								<button
+									type="button"
+									role="menuitem"
+									disabled={!count}
+									onClick={() => {
+										onDelete(deletes);
+										setOpen(false);
+										button.current?.focus();
+									}}
+								>
+									{label}
+									<span className={styles.menuCount}>{count}</span>
+								</button>
+							</li>
+						);
+					})}
+				</ul>
+			)}
+		</div>
+	);
+}
 
 // A drag in progress: drawing a new box, or moving or resizing box index.
 // start is where it began, in the image's pixels, and original the box then.
@@ -280,11 +371,8 @@ export default function BoxEditor({
 		setSelected(undefined);
 	};
 
-	// Deletes the boxes that aren't Manchu, or only those not in a column of
-	// Manchu
-	const removeOther = (outsideColumns: boolean) => {
-		setBoxes((previous) => previous.filter((box) => box.kind === 'manchu'
-			|| (outsideColumns && besideManchu(box, previous))));
+	const removeMany = (deletes: (box: Box, boxes: Box[]) => boolean) => {
+		setBoxes((previous) => previous.filter((box) => !deletes(box, previous)));
 		setSelected(undefined);
 	};
 
@@ -428,21 +516,7 @@ export default function BoxEditor({
 					{`Drag on the page to draw a box, or drag a box to move it. Select a box to resize it by its handles, and to change its kind or delete it (or press Delete) from the bar beside it. Boxes can be at most ${MAX_ASPECT} times as tall as they are wide.`}
 				</p>
 				<div className={styles.controls}>
-					<button
-						type="button"
-						disabled={busy || !boxes.some((box) => box.kind !== 'manchu')}
-						onClick={() => { removeOther(false); }}
-					>
-						Delete all non-Manchu boxes
-					</button>
-					<button
-						type="button"
-						disabled={busy || !boxes.some((box) => box.kind !== 'manchu' && !besideManchu(box, boxes))}
-						title="Keeps those in a column of Manchu, which stand as □ in the text"
-						onClick={() => { removeOther(true); }}
-					>
-						Delete all non-Manchu boxes outside of a column
-					</button>
+					<DeleteMany boxes={boxes} disabled={busy || !boxes.length} onDelete={removeMany} />
 					<button
 						type="button"
 						disabled={busy}
