@@ -14,10 +14,10 @@ export default function Home() {
 				{'Dots and Circles is a personal project by '}
 				<a href="https://sasha-m-ebersole.com/">Sasha Madden Ebersole</a>
 				{' for automatically transcribing scans of Manchu documents. '}
-				Upload a scan or photo of a page,
-				or a whole PDF, and it finds each word, reads it with a model trained
-				from scratch for Manchu, and gives you the page&apos;s text in Manchu
-				script and in Abkai romanization. Words it may have misread are flagged
+				Upload a photo of a page,
+				or a whole PDF, and it finds each word, reads it with a transformer-based
+				model, and gives you the page&apos;s text in Manchu script and in Abkai or
+				Norman/Möllendorff romanization. Words it may have misread are flagged
 				with the closest entries in Norman&apos;s dictionary and Wiktionary, so
 				you can correct them before saving the text.
 			</p>
