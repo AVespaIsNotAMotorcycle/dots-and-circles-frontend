@@ -20,7 +20,7 @@ export default function AboutPage() {
 			<p>
 				{'Dots and Circles is a personal project by '}
 				<a href="https://sasha-m-ebersole.com/">Sasha Madden Ebersole</a>
-				{' for automatically transcribing scans of Manchu documents. Its reading model is a transformer, written by hand and trained on rendered fonts and photographed words of print. The code, and how the model scores on test sets, are '}
+				{' for automatically transcribing scans of Manchu documents. Its reading model is a sequence of 12 transformers with linear layers at each end, trained on rendered fonts and photographed words of print. The code, and how the model scores on test sets, are '}
 				<a href={GITHUB}>on GitHub</a>
 				.
 			</p>
@@ -28,9 +28,11 @@ export default function AboutPage() {
 			<section aria-labelledby="feedback">
 				<h2 id="feedback">Feedback</h2>
 				<p>
-					Feedback is welcome, and wanted: pages it misreads, words it flags
-					that are right (or misses that are wrong), print it struggles with,
-					or anything that would make it more useful for your work. Write to
+					Feedback is welcome, and wanted, especially for missing features
+					for this site. I am aware of the model's poor performance on
+					handwritten text, and am working on a platform for crowdsourcing
+					a publicly available dataset of labelled handwritten words.
+					For anything else that would improve this tool, please write to
 					{' '}
 					<a href={`mailto:${EMAIL}`}>{EMAIL}</a>
 					.
@@ -62,10 +64,6 @@ export default function AboutPage() {
 							The Jerry Norman dictionary
 						</a>
 					</li>
-				</ul>
-
-				<h3>Test data</h3>
-				<ul>
 					<li>
 						<a href="https://www.scidb.cn/en/detail?dataSetId=b45491b63d694534a9323acf14846586">
 							Haipeng SUN, Wenhao TAO, Xiaojun BI. A dataset of Manchu ancient book
