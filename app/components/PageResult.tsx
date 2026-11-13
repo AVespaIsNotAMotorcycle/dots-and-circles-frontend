@@ -209,7 +209,7 @@ function Choice({
 						{'Form of '}
 						<span className={styles.choiceLemma} lang={ROMANIZED_LANG}>{form.lemma}</span>
 						{' with '}
-						<span lang={ROMANIZED_LANG}>{form.ending}</span>
+						<span className={styles.choiceEnding} lang={ROMANIZED_LANG}>{form.ending}</span>
 					</span>
 				)}
 				{details.map((detail) => (

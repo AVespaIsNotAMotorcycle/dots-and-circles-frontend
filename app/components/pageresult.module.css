@@ -293,6 +293,10 @@ button.choice:focus-visible {
 	color: var(--color-foreground);
 	font-weight: 700;
 }
+/* Its ending, kept on one line, as a line may break after a hyphen */
+.choiceEnding {
+	white-space: nowrap;
+}
 .choiceAction, .choiceCurrent {
 	margin-top: .25rem;
 	font-size: .8125rem;
