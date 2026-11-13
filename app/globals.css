@@ -37,8 +37,6 @@ p + p {
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
 }
 
 /*
@@ -275,17 +273,24 @@ main {
 	}
 }
 
-@font-face { font-family: manchu0; src: url('/XM_BiaoHei.ttf'); }
-@font-face { font-family: manchu1; src: url('/XM_GuFeng.ttf'); }
-@font-face { font-family: manchu2; src: url('/XM_LiuYe.ttf'); }
-@font-face { font-family: manchu3; src: url('/XM_ShuKai.ttf'); }
-@font-face { font-family: manchu4; src: url('/XM_WenJian.ttf'); }
-@font-face { font-family: manchu5; src: url('/XM_WenQin.ttf'); }
-@font-face { font-family: manchu6; src: url('/XM_XingShu.ttf'); }
-@font-face { font-family: manchu7; src: url('/XM_YaBai.ttf'); }
-@font-face { font-family: manchu8; src: url('/XM_YingBi.ttf'); }
-@font-face { font-family: manchu9; src: url('/XM_ZhengBai.ttf'); }
-@font-face { font-family: manchu10; src: url('/XM_ZhengHei.ttf'); }
+/* The Manchu fonts. Only manchu0 is used, so only it is downloaded, as
+   WOFF2 (a third the size), with the TTF for any browser without it. Text
+   shows in a fallback font until it's in, rather than not at all. */
+@font-face {
+	font-family: manchu0;
+	src: url('/XM_BiaoHei.woff2') format('woff2'), url('/XM_BiaoHei.ttf') format('truetype');
+	font-display: swap;
+}
+@font-face { font-family: manchu1; src: url('/XM_GuFeng.ttf'); font-display: swap; }
+@font-face { font-family: manchu2; src: url('/XM_LiuYe.ttf'); font-display: swap; }
+@font-face { font-family: manchu3; src: url('/XM_ShuKai.ttf'); font-display: swap; }
+@font-face { font-family: manchu4; src: url('/XM_WenJian.ttf'); font-display: swap; }
+@font-face { font-family: manchu5; src: url('/XM_WenQin.ttf'); font-display: swap; }
+@font-face { font-family: manchu6; src: url('/XM_XingShu.ttf'); font-display: swap; }
+@font-face { font-family: manchu7; src: url('/XM_YaBai.ttf'); font-display: swap; }
+@font-face { font-family: manchu8; src: url('/XM_YingBi.ttf'); font-display: swap; }
+@font-face { font-family: manchu9; src: url('/XM_ZhengBai.ttf'); font-display: swap; }
+@font-face { font-family: manchu10; src: url('/XM_ZhengHei.ttf'); font-display: swap; }
 
 main.labelling {
 	display: flex;

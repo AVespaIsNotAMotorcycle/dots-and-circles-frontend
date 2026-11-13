@@ -1,19 +1,8 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
 import Header from "./components/Header";
 import { RomanizationProvider } from "./components/RomanizationContext";
 import "./globals.css";
 import { SITE_DESCRIPTION, SITE_URL } from "./site";
-
-const geistSans = Geist({
-  variable: "--font-geist-sans",
-  subsets: ["latin"],
-});
-
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
-  subsets: ["latin"],
-});
 
 export const metadata: Metadata = {
   // Makes the Open Graph image's URL absolute
@@ -45,7 +34,7 @@ export default function RootLayout({
   return (
     <html
       lang="en"
-      className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
+      className="h-full antialiased"
     >
       <body className="min-h-full flex flex-col">
         <RomanizationProvider>
