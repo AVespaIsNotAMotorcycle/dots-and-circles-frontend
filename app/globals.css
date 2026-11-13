@@ -302,10 +302,14 @@ form {
 	width: fit-content;
 }
 
+/* Manchu runs vertically. Every vertical Manchu rule also sets text-orientation:
+   sideways, so the word is set as one horizontal run and turned: without it
+   Safari sets each letter on its own, unjoined and spaced apart. */
 .manchu-text {
 	font-family: manchu0;
 	font-size: 1.9rem;
 	writing-mode: vertical-lr;
+	text-orientation: sideways;
 }
 
 select,
@@ -443,6 +447,7 @@ a {
 	font-family: manchu0;
 	font-size: 5rem;
 	writing-mode: vertical-lr;
+	text-orientation: sideways;
 }
 .predictionCards .left {
 	display: flex;

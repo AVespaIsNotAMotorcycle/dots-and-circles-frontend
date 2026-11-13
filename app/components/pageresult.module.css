@@ -190,6 +190,7 @@ svg.cropImage {
 	font-family: manchu0;
 	font-size: 2.5rem;
 	writing-mode: vertical-lr;
+	text-orientation: sideways;
 	max-height: min(45svh, 18rem);
 }
 .dialogMain {
@@ -270,6 +271,7 @@ button.choice:focus-visible {
 	font-size: 1.75rem;
 	line-height: 1;
 	writing-mode: vertical-lr;
+	text-orientation: sideways;
 	max-height: 7rem;
 }
 .choiceText {
@@ -331,6 +333,7 @@ button.choice:focus-visible {
 	font-family: manchu0;
 	font-size: 1.75rem;
 	writing-mode: vertical-lr;
+	text-orientation: sideways;
 	max-height: 8rem;
 }
 .marked figcaption {
@@ -357,6 +360,7 @@ button.choice:focus-visible {
 	font-family: manchu0;
 	font-size: 2rem;
 	writing-mode: vertical-lr;
+	text-orientation: sideways;
 	white-space: pre-line;
 	max-height: 70svh;
 	max-width: 100%;
