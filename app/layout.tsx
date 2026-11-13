@@ -22,6 +22,9 @@ export const metadata: Metadata = {
     default: "Dots and Circles: Manchu OCR",
     template: "%s · Dots and Circles",
   },
+  // The one address to index the home page under, not the Heroku one (each
+  // other page gives its own)
+  alternates: { canonical: "/" },
   description: "Read printed Manchu with OCR. Upload a page or a PDF and get its text in Manchu script and Abkai romanization, check words flagged against Manchu dictionaries, and save it as text.",
 };
 

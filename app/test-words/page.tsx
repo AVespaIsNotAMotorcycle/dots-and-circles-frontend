@@ -4,6 +4,7 @@ import TestWords from '../components/TestWords';
 
 export const metadata: Metadata = {
 	title: 'Test words',
+	alternates: { canonical: '/test-words' },
 	description: 'Every test word, real and synthetic, with the model\'s reading of it.',
 };
 
