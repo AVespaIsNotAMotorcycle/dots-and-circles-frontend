@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react';
+import { useCallback, useId, useRef, useState } from 'react';
 
 import type { EditedBox, Page } from './types';
 import styles from './boxeditor.module.css';
@@ -24,6 +24,8 @@ const LOUPE_EXTRA_H = 32;
 // How many screen pixels it shows a pixel of the page as, at most, so a
 // tiny box isn't blown up into a blur
 const LOUPE_MAX_ZOOM = 12;
+// The gap between a selected box and its tooltip, in screen pixels
+const TOOLTIP_GAP = 8;
 
 // A box being edited: where it is, its kind, and the reading the server
 // gave it, kept only while the user hasn't changed it
@@ -239,6 +241,16 @@ export default function BoxEditor({
 	const [selected, setSelected] = useState<number>();
 	const [drag, setDrag] = useState<Drag>();
 	const svg = useRef<SVGSVGElement>(null);
+	// The selected box's tooltip's size in screen pixels, once it's shown, to
+	// place it
+	const [tooltipSize, setTooltipSize] = useState({ w: 0, h: 0 });
+	const tooltipRef = useCallback((node: HTMLDivElement | null) => {
+		if (!node) return;
+		const w = node.offsetWidth;
+		const h = node.offsetHeight;
+		setTooltipSize((previous) => (previous.w === w && previous.h === h ? previous : { w, h }));
+	}, []);
+	const kindName = useId();
 	// The image's pixels per screen pixel, for handles that stay one size
 	const scale = useImageScale(svg, size.w);
 
@@ -361,6 +373,20 @@ export default function BoxEditor({
 		: drag?.type === 'draw' && drag.box && drag.edges
 			? { box: drag.box, edges: drag.edges }
 			: undefined;
+	// The selected box's tooltip, in screen pixels from the page's top left
+	// corner: centred above the box, or below it if there's no room, and
+	// kept on the page
+	let tooltip: { left: number; top: number } | undefined;
+	if (current && !drag && !busy) {
+		const shown = { w: size.w / scale, h: size.h / scale };
+		const clamp = (value: number, max: number) => Math.max(0, Math.min(value, max));
+		const above = current.y / scale - TOOLTIP_GAP - tooltipSize.h;
+		const below = (current.y + current.h) / scale + TOOLTIP_GAP;
+		tooltip = {
+			left: clamp((current.x + current.w / 2) / scale - tooltipSize.w / 2, shown.w - tooltipSize.w),
+			top: above >= 0 ? above : clamp(below, shown.h - tooltipSize.h),
+		};
+	}
 	// Drawn last, so it's on top of any box it overlaps
 	const order = boxes.map((_, index) => index)
 		.sort((a, b) => Number(a === selected) - Number(b === selected));
@@ -369,30 +395,9 @@ export default function BoxEditor({
 		<div className={styles.editor}>
 			<div className={styles.toolbar} role="toolbar" aria-label="Edit the boxes">
 				<p className={styles.hint}>
-					{`Drag on the page to draw a box, or drag a box to move it. Select a box to resize it by its handles, change its kind, or delete it (or press Delete). Boxes can be at most ${MAX_ASPECT} times as tall as they are wide.`}
+					{`Drag on the page to draw a box, or drag a box to move it. Select a box to resize it by its handles, and to change its kind or delete it (or press Delete) from the bar beside it. Boxes can be at most ${MAX_ASPECT} times as tall as they are wide.`}
 				</p>
 				<div className={styles.controls}>
-					<fieldset className={styles.kind} disabled={!current || busy}>
-						<legend className={styles.visuallyHidden}>The selected box is</legend>
-						{(['manchu', 'other'] as const).map((kind) => (
-							<label key={kind}>
-								<input
-									type="radio"
-									name="box-kind"
-									checked={current?.kind === kind}
-									onChange={() => { if (selected !== undefined) setKind(selected, kind); }}
-								/>
-								{kind === 'manchu' ? 'Manchu' : 'Not Manchu'}
-							</label>
-						))}
-					</fieldset>
-					<button
-						type="button"
-						disabled={!current || busy}
-						onClick={() => { if (selected !== undefined) remove(selected); }}
-					>
-						Delete box
-					</button>
 					<button
 						type="button"
 						disabled={busy}
@@ -488,6 +493,33 @@ export default function BoxEditor({
 			</svg>
 			{magnified && (
 				<Loupe image={page.image} size={size} boxes={boxes} scale={scale} {...magnified} />
+			)}
+			{current && tooltip && selected !== undefined && (
+				<div
+					ref={tooltipRef}
+					className={styles.tooltip}
+					style={tooltip}
+					role="toolbar"
+					aria-label="The selected box"
+				>
+					<fieldset className={styles.kind}>
+						<legend className={styles.visuallyHidden}>The selected box is</legend>
+						{(['manchu', 'other'] as const).map((kind) => (
+							<label key={kind}>
+								<input
+									type="radio"
+									name={kindName}
+									checked={current.kind === kind}
+									onChange={() => { setKind(selected, kind); }}
+								/>
+								{kind === 'manchu' ? 'Manchu' : 'Not Manchu'}
+							</label>
+						))}
+					</fieldset>
+					<button type="button" onClick={() => { remove(selected); }}>
+						Delete box
+					</button>
+				</div>
 			)}
 			</div>
 			)}

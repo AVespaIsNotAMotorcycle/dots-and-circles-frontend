@@ -146,6 +146,29 @@
 	max-width: none;
 }
 
+/* The selected box's kind and Delete, beside it */
+.tooltip {
+	position: absolute;
+	z-index: 1;
+	display: flex;
+	align-items: center;
+	gap: .5rem;
+	padding: .35rem;
+	background: var(--color-background, white);
+	border: 2px solid var(--color-foreground);
+	border-radius: 5px;
+	box-shadow: rgba(0, 0, 0, .3) 0 4px 12px;
+	white-space: nowrap;
+	font-size: .875rem;
+}
+.tooltip .kind {
+	padding: .35rem .6rem;
+	gap: .75rem;
+}
+.tooltip button {
+	padding: .35rem .6rem;
+}
+
 /* The magnifier shown while drawing or resizing a box */
 .loupe {
 	position: absolute;
