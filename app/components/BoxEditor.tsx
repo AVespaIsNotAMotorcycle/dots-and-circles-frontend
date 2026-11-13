@@ -408,8 +408,21 @@ export default function BoxEditor({
 	const order = boxes.map((_, index) => index)
 		.sort((a, b) => Number(a === selected) - Number(b === selected));
 
+	// Above and below the page, which can be taller than the window
+	const actions = (
+		<div className={styles.actions}>
+			<button type="button" disabled={busy} onClick={() => { onSubmit(boxes.map(toSend)); }}>
+				{busy ? 'Reading…' : 'Read These Boxes'}
+			</button>
+			<button type="button" disabled={busy} onClick={onCancel}>
+				Cancel
+			</button>
+		</div>
+	);
+
 	return (
 		<div className={styles.editor}>
+			{actions}
 			<div className={styles.toolbar} role="toolbar" aria-label="Edit the boxes">
 				<p className={styles.hint}>
 					{`Drag on the page to draw a box, or drag a box to move it. Select a box to resize it by its handles, and to change its kind or delete it (or press Delete) from the bar beside it. Boxes can be at most ${MAX_ASPECT} times as tall as they are wide.`}
@@ -556,14 +569,7 @@ export default function BoxEditor({
 			</div>
 			)}
 			</ZoomFrame>
-			<div className={styles.actions}>
-				<button type="button" disabled={busy} onClick={() => { onSubmit(boxes.map(toSend)); }}>
-					{busy ? 'Reading…' : 'Read These Boxes'}
-				</button>
-				<button type="button" disabled={busy} onClick={onCancel}>
-					Cancel
-				</button>
-			</div>
+			{actions}
 		</div>
 	);
 }
