@@ -212,6 +212,15 @@ function fit(x1: number, y1: number, x2: number, y2: number,
 	return { x: left, y: top, w, h: bottom - top };
 }
 
+// Whether a box is beside Manchu, as a box in a column of Manchu is: it
+// overlaps a Manchu box side to side by at least half the narrower one's
+// width. A box of other text in a column (□ in the text) is; one in the
+// margin, or in a column with no Manchu, isn't.
+const besideManchu = (box: Box, boxes: Box[]) => boxes.some((other) => (
+	other.kind === 'manchu'
+	&& Math.min(box.x + box.w, other.x + other.w) - Math.max(box.x, other.x)
+		>= Math.min(box.w, other.w) / 2));
+
 // A drag in progress: drawing a new box, or moving or resizing box index.
 // start is where it began, in the image's pixels, and original the box then.
 type Drag =
@@ -268,6 +277,14 @@ export default function BoxEditor({
 
 	const remove = (index: number) => {
 		setBoxes((previous) => previous.filter((_, i) => i !== index));
+		setSelected(undefined);
+	};
+
+	// Deletes the boxes that aren't Manchu, or only those not in a column of
+	// Manchu
+	const removeOther = (outsideColumns: boolean) => {
+		setBoxes((previous) => previous.filter((box) => box.kind === 'manchu'
+			|| (outsideColumns && besideManchu(box, previous))));
 		setSelected(undefined);
 	};
 
@@ -398,6 +415,21 @@ export default function BoxEditor({
 					{`Drag on the page to draw a box, or drag a box to move it. Select a box to resize it by its handles, and to change its kind or delete it (or press Delete) from the bar beside it. Boxes can be at most ${MAX_ASPECT} times as tall as they are wide.`}
 				</p>
 				<div className={styles.controls}>
+					<button
+						type="button"
+						disabled={busy || !boxes.some((box) => box.kind !== 'manchu')}
+						onClick={() => { removeOther(false); }}
+					>
+						Delete all non-Manchu boxes
+					</button>
+					<button
+						type="button"
+						disabled={busy || !boxes.some((box) => box.kind !== 'manchu' && !besideManchu(box, boxes))}
+						title="Keeps those in a column of Manchu, which stand as □ in the text"
+						onClick={() => { removeOther(true); }}
+					>
+						Delete all non-Manchu boxes outside of a column
+					</button>
 					<button
 						type="button"
 						disabled={busy}
