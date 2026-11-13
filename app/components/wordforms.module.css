@@ -1,5 +1,5 @@
-/* UploadForm: the image and the Abkai side by side across the whole width,
-   with the button centred below them */
+/* UploadForm: the image, then the Abkai, across the whole width, with the
+   button centred below them */
 .options {
 	display: flex;
 	flex-direction: column;
@@ -12,19 +12,10 @@
 	display: none;
 }
 .inputs {
+	/* The upload, with the transcription under it, open or closed */
 	display: grid;
-	grid-template-columns: repeat(2, minmax(0, 1fr));
-	gap: 1rem;
-}
-/* One above the other when there isn't room for both, or the transcription
-   is closed, so its summary sits under the upload */
-@media (max-width: 639.98px) {
-	.inputs {
-		grid-template-columns: minmax(0, 1fr);
-	}
-}
-.inputs.oneColumn {
 	grid-template-columns: minmax(0, 1fr);
+	gap: 1rem;
 }
 /* The transcription to compare with, out of the way until opened */
 .transcription summary {

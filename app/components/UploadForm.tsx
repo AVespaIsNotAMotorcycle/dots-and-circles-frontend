@@ -232,8 +232,7 @@ export default function UploadForm({
 			hidden={hidden}
 			onSubmit={onSubmit}
 		>
-			<div className={[styles.inputs, !showTranscription && styles.oneColumn]
-				.filter(Boolean).join(' ')}>
+			<div className={styles.inputs}>
 			<div className={styles.field}>
 			<span id="upload-title">Upload an image of a single page, or a PDF</span>
 			<div
