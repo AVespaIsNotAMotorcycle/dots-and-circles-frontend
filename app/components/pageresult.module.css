@@ -533,3 +533,48 @@ button.choice:has(.shortcut) {
 	background: var(--accent-soft);
 	box-shadow: 0 0 0 2px var(--accent);
 }
+
+/* What the colours and marks on the page mean */
+.legend {
+	display: flex;
+	flex-wrap: wrap;
+	gap: .25rem 1rem;
+	margin-bottom: .375rem;
+	color: var(--foreground);
+	font-size: .875rem;
+}
+.legend li {
+	display: flex;
+	align-items: center;
+	gap: .375rem;
+}
+.swatch {
+	display: inline-block;
+	width: .875rem;
+	height: 1.125rem;
+	border: 2px solid;
+	border-radius: 2px;
+	background: rgba(255, 255, 255, .55);
+	vertical-align: middle;
+}
+.swatchRight { border-color: green; }
+.swatchWrong { border-color: red; }
+.swatchUnchecked { border-color: #1e6fd9; }
+.swatchLow { border-color: #e6b800; }
+.swatchOther { border-color: grey; }
+.legendBadge {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	width: 1.125rem;
+	height: 1.125rem;
+	border-radius: 50%;
+	background: #111;
+	color: white;
+	font-size: .6875rem;
+	font-weight: 800;
+	vertical-align: middle;
+}
+.legendCorrected {
+	background: #0d9488;
+}

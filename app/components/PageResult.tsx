@@ -717,6 +717,47 @@ function PageText({
 	);
 }
 
+// What the colours and marks on the page mean, for those it has: a swatch
+// (a box's outline) or a badge, and what it stands for
+function Legend({ compared, lowConfidence, other, flagged, corrected }: {
+	// Whether there's text to compare the reading with
+	compared: boolean;
+	// Whether the page has any of each
+	lowConfidence: boolean;
+	other: boolean;
+	flagged: boolean;
+	corrected: boolean;
+}) {
+	const items: { mark: React.ReactNode; label: string }[] = [
+		...(compared
+			? [
+				{ mark: <span className={`${styles.swatch} ${styles.swatchRight}`} />, label: 'Read right' },
+				{ mark: <span className={`${styles.swatch} ${styles.swatchWrong}`} />, label: 'Read wrong' },
+			]
+			: [{ mark: <span className={`${styles.swatch} ${styles.swatchUnchecked}`} />, label: 'Manchu' }]),
+		...(lowConfidence
+			? [{ mark: <span className={`${styles.swatch} ${styles.swatchLow}`} />, label: 'Low confidence, left out of the text' }]
+			: []),
+		...(other ? [{ mark: <span className={`${styles.swatch} ${styles.swatchOther}`} />, label: 'Other text, such as Chinese' }] : []),
+		...(flagged
+			? [{ mark: <span className={styles.legendBadge}>?</span>, label: compared ? 'Read wrong: see close dictionary words' : 'Not a dictionary word: see close ones' }]
+			: []),
+		...(corrected
+			? [{ mark: <span className={`${styles.legendBadge} ${styles.legendCorrected}`}>✎</span>, label: 'Your correction' }]
+			: []),
+	];
+	return (
+		<ul className={styles.legend} aria-label="Key">
+			{items.map(({ mark, label }) => (
+				<li key={label}>
+					<span aria-hidden="true">{mark}</span>
+					{label}
+				</li>
+			))}
+		</ul>
+	);
+}
+
 // A page read by POST /upload/multiple or GET /random?source=page: the page
 // with its boxes drawn over it, its text in Manchu and Abkai, and how that
 // compares with the Abkai expected (the user's, or a sample page's
@@ -828,7 +869,16 @@ export default function PageResult({
 				{rereadError && <p className={styles.error} role="alert">{rereadError}</p>}
 				<figcaption>
 					{editing && 'Boxes outlined in purple dashes are read again; the rest keep their reading and colour. '}
-					{!editing && `Read by ${page.model}. Manchu words are labelled with their reading and outlined ${compared ? 'in green if read right or red if read wrong' : 'in blue'}, or in yellow if read with too little confidence to include in the text; other text is outlined in grey.${flagged ? ` ${compared ? 'Words read wrong' : 'Readings that aren\'t dictionary words'} have a ? on their corner: click one for the closest dictionary words.` : ''}${corrected ? ' Words you corrected are in teal, with a ✎.' : ''} Click any box to see it closer${onCorrect ? ' or correct its reading' : ''}.`}
+					{!editing && (
+						<Legend
+							compared={compared}
+							lowConfidence={page.boxes.some((box) => box.kind === 'manchu' && box['low-confidence'])}
+							other={page.boxes.some((box) => box.kind !== 'manchu')}
+							flagged={flagged}
+							corrected={corrected > 0}
+						/>
+					)}
+					{!editing && `Read by ${page.model}. Click a box or a word to see it closer${onCorrect ? ' and correct it' : ''}.`}
 					{angle && ` ${angle}`}
 					{random?.credit && (
 						<span className={styles.credit}>
