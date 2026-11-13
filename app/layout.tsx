@@ -25,6 +25,14 @@ export const metadata: Metadata = {
   // The one address to index the home page under, not the Heroku one (each
   // other page gives its own)
   alternates: { canonical: "/" },
+  // For links shared on social sites and chat apps, which show
+  // opengraph-image.png large
+  openGraph: {
+    type: "website",
+    siteName: "Dots and Circles",
+    locale: "en",
+  },
+  twitter: { card: "summary_large_image" },
   description: "Read printed Manchu with OCR. Upload a page or a PDF and get its text in Manchu script and Abkai romanization, check words flagged against Manchu dictionaries, and save it as text.",
 };
 
