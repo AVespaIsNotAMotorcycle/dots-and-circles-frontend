@@ -228,13 +228,37 @@ export default function Demo({ backendAwake = false }: {
 			: []));
 	// The last one gone to, so Next goes on from it
 	const [lastChecked, setLastChecked] = useState<{ reading: number; box: number }>();
-	const nextToCheck = () => {
-		const next = toCheck.find(({ reading, box }) => !lastChecked
+	// True while the user is going through them with Next word: settling one
+	// opens the next, until they close one without settling it
+	const checking = useRef(false);
+	// Opens the next word to check after the last one, round to the first,
+	// leaving out the one gone to last if it's just been settled
+	const nextToCheck = (settled = false) => {
+		const left = settled && lastChecked
+			? toCheck.filter(({ reading, box }) => (
+				reading !== lastChecked.reading || box !== lastChecked.box))
+			: toCheck;
+		const next = left.find(({ reading, box }) => !lastChecked
 			|| reading > lastChecked.reading
-			|| (reading === lastChecked.reading && box > lastChecked.box)) ?? toCheck[0];
-		if (!next) return;
+			|| (reading === lastChecked.reading && box > lastChecked.box)) ?? left[0];
+		if (!next) {
+			checking.current = false;
+			return;
+		}
+		checking.current = true;
 		setLastChecked(next);
 		openBox(boxId(next.reading, next.box));
+	};
+	const onBoxClosed = (ruled: boolean) => {
+		if (!checking.current) return;
+		if (!ruled) {
+			checking.current = false;
+			return;
+		}
+		// Once the settled word's close-up has closed. toCheck is from before
+		// it was settled, but nothing else has changed, so leaving it out is
+		// enough.
+		setTimeout(() => { nextToCheck(true); });
 	};
 
 	// Loads the sample page with this name, or any one for ''
@@ -307,6 +331,7 @@ export default function Demo({ backendAwake = false }: {
 							confirmed={confirmed}
 							onConfirm={(box, yes) => { confirm(index, box, yes); }}
 							boxId={(box) => boxId(index, box)}
+							onBoxClosed={onBoxClosed}
 						/>
 					)
 					: (
@@ -320,7 +345,7 @@ export default function Demo({ backendAwake = false }: {
 						</section>
 					)
 			))}
-			<FlaggedWords count={toCheck.length} onNext={nextToCheck} />
+			<FlaggedWords count={toCheck.length} onNext={() => { nextToCheck(); }} />
 		</section>
 	);
 }

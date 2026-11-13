@@ -410,7 +410,17 @@ function BoxDialog({
 			ref={dialog}
 			className={styles.dialog}
 			aria-labelledby="box-dialog-title"
-			onClose={onClose}
+			// Escape closes it through the box being taken away, as the buttons
+			// do, so the dialog only closes one way
+			onCancel={(event) => {
+				event.preventDefault();
+				onClose();
+			}}
+			// If the browser closes it anyway (it may skip cancel for a second
+			// Escape), that's dealt with here. Not the close that follows the box
+			// being taken away, which has been, nor a late one that arrives after
+			// the next box has opened it again.
+			onClose={() => { if (box && !dialog.current?.open) onClose(); }}
 			// A click on the backdrop lands on the dialog itself
 			onClick={(event) => {
 				if (event.target === event.currentTarget) onClose();
@@ -568,7 +578,7 @@ function PageText({ lines, suggests, corrected, script, boxId, onOpen }: {
 // transcription)
 export default function PageResult({
 	page, expected = '', title = 'Page', id, onReread, corrections = {}, onCorrect,
-	confirmed = {}, onConfirm, boxId,
+	confirmed = {}, onConfirm, boxId, onBoxClosed,
 }: {
 	page: ReadPage;
 	expected?: string;
@@ -589,6 +599,10 @@ export default function PageResult({
 	onConfirm?: (box: PageBox, confirmed: boolean) => void;
 	// Each box's data-box-id, on it and its words, so it can be found to go to
 	boxId?: (index: number) => string;
+	// Called when a box's close-up closes, ruled true if that's because the
+	// user settled its reading: picked one, marked the model's right, or
+	// marked it as not Manchu
+	onBoxClosed?: (ruled: boolean) => void;
 }) {
 	const random = 'transcription' in page ? page : undefined;
 	// The page whose boxes are being edited, so a new page ends the editing
@@ -624,7 +638,12 @@ export default function PageResult({
 	const [opened, setOpened] = useState<{ page: ReadPage; index: number }>();
 	const open = opened?.page === page ? opened.index : undefined;
 	const openBox = (index: number) => { setOpened({ page, index }); };
-	const closeBox = () => { setOpened(undefined); };
+	// ruled: whether the user made a ruling on the word, rather than just
+	// closing it
+	const closeBox = (ruled = false) => {
+		setOpened(undefined);
+		onBoxClosed?.(ruled);
+	};
 
 	return (
 		<section className={styles.page} id={id}>
@@ -713,14 +732,15 @@ export default function PageResult({
 				onConfirm={(yes) => {
 					if (open === undefined || !onConfirm) return;
 					onConfirm(page.boxes[open], yes);
-					if (yes) closeBox();
+					if (yes) closeBox(true);
 				}}
 				onCorrect={(correction) => {
 					if (open === undefined || !onCorrect) return;
 					onCorrect(page.boxes[open], correction);
-					closeBox();
+					// Going back to the model's reading leaves the word unsettled
+					closeBox(correction !== undefined);
 				}}
-				onClose={closeBox}
+				onClose={() => { closeBox(); }}
 			/>
 			{expected && (
 				<Comparison
