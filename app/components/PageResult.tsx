@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useId, useRef, useState } from 'react';
 
 import BoxEditor from './BoxEditor';
 import type { BoxStatus } from './BoxEditor';
@@ -255,7 +255,8 @@ function TypeReading({ box, onCorrect }: {
 	const [typed, setTyped] = useState('');
 	const manchu = typed.trim() ? abkaiToManchu(typed) : undefined;
 	const invalid = Boolean(typed.trim()) && !manchu;
-	const id = `correct-${boxKey(box)}`;
+	// Unique on the page, which may have a close-up for each of a PDF's pages
+	const id = useId();
 
 	return (
 		<form
@@ -315,6 +316,8 @@ function BoxDialog({
 	onClose: () => void;
 }) {
 	const dialog = useRef<HTMLDialogElement>(null);
+	// Unique on the page, which may have one for each of a PDF's pages
+	const titleId = useId();
 	const close = useRef<HTMLButtonElement>(null);
 	useEffect(() => {
 		if (box && !dialog.current?.open) {
@@ -328,7 +331,7 @@ function BoxDialog({
 	const header = (title: string, detail?: string) => (
 		<header className={styles.dialogHeader}>
 			<div>
-				<h4 id="box-dialog-title">{title}</h4>
+				<h4 id={titleId}>{title}</h4>
 				{detail && <p className={styles.hint}>{detail}</p>}
 			</div>
 			<button
@@ -469,7 +472,7 @@ function BoxDialog({
 		<dialog
 			ref={dialog}
 			className={styles.dialog}
-			aria-labelledby="box-dialog-title"
+			aria-labelledby={titleId}
 			// Escape closes it through the box being taken away, as the buttons
 			// do, so the dialog only closes one way
 			onCancel={(event) => {
