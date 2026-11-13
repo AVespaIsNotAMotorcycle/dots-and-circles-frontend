@@ -367,7 +367,7 @@ button.choice:focus-visible {
 	writing-mode: vertical-lr;
 	text-orientation: sideways;
 	white-space: pre-line;
-	max-height: 70svh;
+	max-height: 80svh;
 	max-width: 100%;
 	overflow-x: auto;
 }
@@ -446,9 +446,41 @@ button.choice:focus-visible {
 	fill: #0d9488;
 }
 
-/* The page's text: a block per line (a column, in the vertical Manchu) */
+/* The page's text: a block per line (a column, in the vertical Manchu),
+   numbered, as a long line may wrap where browsers differ. The number
+   hangs before the line, and isn't copied with the text */
+.manchu, .abkai {
+	counter-reset: line;
+}
+.manchu {
+	--number-size: 2.25rem;
+}
+.abkai {
+	--number-size: 2rem;
+}
 .textLine {
 	display: block;
+	padding-inline-start: var(--number-size);
+	text-indent: calc(-1 * var(--number-size));
+}
+.textLine::before {
+	counter-increment: line;
+	content: counter(line);
+	content: counter(line) / '';
+	display: inline-block;
+	text-indent: 0;
+	color: grey;
+	font-family: Arial, Helvetica, sans-serif;
+	font-size: .75rem;
+	font-weight: 400;
+}
+.abkai .textLine::before {
+	width: var(--number-size);
+}
+.manchu .textLine::before {
+	writing-mode: horizontal-tb;
+	height: var(--number-size);
+	text-align: center;
 }
 /* A word read from a box, which opens it close up. It keeps its mark on
    its line: Firefox would otherwise break between them */
@@ -471,6 +503,8 @@ button.choice:focus-visible {
 /* The same marks as on the boxes, kept upright in the vertical Manchu */
 .wordBadge {
 	display: inline-block;
+	/* Not the line's hanging indent, which would push its mark out */
+	text-indent: 0;
 	writing-mode: horizontal-tb;
 	width: 1.25rem;
 	height: 1.25rem;
