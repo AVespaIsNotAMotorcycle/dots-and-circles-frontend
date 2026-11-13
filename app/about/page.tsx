@@ -23,6 +23,7 @@ export default function AboutPage() {
 				{' for automatically transcribing scans of Manchu documents. Its reading model is a sequence of 12 transformers with linear layers at each end, trained on rendered fonts and photographed words of print. The code, and how the model scores on test sets, are '}
 				<a href={GITHUB}>on GitHub</a>
 				.
+				{'Nothing you upload or input is saved anywhere but in your browser.'}
 			</p>
 
 			<section aria-labelledby="feedback">
