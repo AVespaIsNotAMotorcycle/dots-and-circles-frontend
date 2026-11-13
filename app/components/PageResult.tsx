@@ -147,125 +147,104 @@ function BoxOutline({ box, id, status, suggests, correction, badge, onOpen }: {
 	);
 }
 
-// The dictionary entries closest to a box's reading
-function ClosestWords({ words, suggests, current, onUse }: {
-	words: ClosestWord[];
-	// Whether the box has a badge for them
-	suggests: boolean;
-	// The box's reading as it stands, the user's if they corrected it
-	current: string;
-	onUse: (word: ClosestWord) => void;
+// One reading a box could have, as a card: in Manchu and Abkai, with a
+// line or two about it. The current one is marked; another, with onPick, is
+// a button that makes it the reading, action saying how.
+function Choice({ manchu, abkai, details, current, action, onPick }: {
+	manchu: string;
+	abkai: string;
+	details: string[];
+	current: boolean;
+	action?: string;
+	onPick?: () => void;
 }) {
-	return (
-		<section className={styles.closest}>
-			<h4>{suggests ? 'Did you mean?' : 'Closest dictionary words'}</h4>
-			<ol>
-				{words.map((word, key) => (
-					<li key={key}>
-						<span className={styles.closestManchu}>{word.manchu}</span>
-						<span className={styles.closestText}>
-							<span className={styles.abkai}>{word.abkai}</span>
-							<span className={styles.hint}>
-								{word.distance === 0 ? 'Same as the reading'
-									: `${word.distance} ${word.distance === 1 ? 'change' : 'changes'} from the reading`}
-							</span>
-							<span className={styles.hint}>
-								{word.sources.map((source) => SOURCES[source] ?? source).join(', ')}
-							</span>
-							{word.abkai !== current && (
-								<button
-									type="button"
-									className={styles.useButton}
-									onClick={() => { onUse(word); }}
-								>
-									{`Use ${word.abkai}`}
-								</button>
-							)}
-						</span>
-					</li>
+	const content = (
+		<>
+			<span className={styles.choiceManchu} aria-hidden="true">{manchu}</span>
+			<span className={styles.choiceText}>
+				<span className={styles.choiceWord}>{abkai}</span>
+				{details.map((detail) => (
+					<span key={detail} className={styles.choiceDetail}>{detail}</span>
 				))}
-			</ol>
-		</section>
+				{current
+					? <span className={styles.choiceCurrent}>✓ Current reading</span>
+					: action && <span className={styles.choiceAction}>{action}</span>}
+			</span>
+		</>
+	);
+	return (
+		<li>
+			{current || !onPick ? (
+				<div className={[styles.choice, current && styles.currentChoice]
+					.filter(Boolean).join(' ')}>
+					{content}
+				</div>
+			) : (
+				<button type="button" className={styles.choice} onClick={onPick}>
+					{content}
+				</button>
+			)}
+		</li>
 	);
 }
 
-// A box's reading as the user would have it, typed in Abkai, shown in
-// Manchu as they type. Their word replaces the model's with onCorrect, and
-// onCorrect(undefined) goes back to the model's.
-function CorrectReading({ box, correction, onCorrect }: {
+// The box's reading as the user would have it, typed in Abkai and shown in
+// Manchu as they type
+function TypeReading({ box, onCorrect }: {
 	box: PageBox;
-	correction?: Correction;
 	onCorrect: (correction?: Correction) => void;
 }) {
 	const [typed, setTyped] = useState('');
 	const manchu = typed.trim() ? abkaiToManchu(typed) : undefined;
+	const invalid = Boolean(typed.trim()) && !manchu;
 	const id = `correct-${boxKey(box)}`;
 
 	return (
-		<section className={styles.correct}>
-			<h4>Your reading</h4>
-			{correction && (
-				<p className={styles.correctedNote}>
-					{correction.notManchu ? 'Marked as not Manchu. ' : (
-						<>
-							{'Corrected to '}
-							<strong>{correction.abkai}</strong>
-							{'. '}
-						</>
-					)}
-					<button type="button" onClick={() => { onCorrect(undefined); }}>
-						Undo correction
-					</button>
-				</p>
-			)}
-			<form
-				className={styles.correctForm}
-				onSubmit={(event) => {
-					event.preventDefault();
-					if (!manchu) return;
-					const abkai = standardAbkai(typed) ?? typed.trim();
-					// The model's own reading is no correction
-					onCorrect(abkai === box['prediction-abkai'] ? undefined : { manchu, abkai });
-				}}
-			>
-				<label htmlFor={id}>
-					{correction && !correction.notManchu ? 'Or type another, in Abkai:' : 'Type the word as it should be read, in Abkai:'}
-				</label>
-				<div className={styles.correctRow}>
-					<input
-						id={id}
-						type="text"
-						autoComplete="off"
-						autoCapitalize="off"
-						spellCheck={false}
-						value={typed}
-						aria-invalid={Boolean(typed.trim() && !manchu)}
-						aria-describedby={`${id}-hint`}
-						onChange={(event) => { setTyped(event.target.value); }}
-					/>
-					<button type="submit" disabled={!manchu}>Use</button>
-					{manchu && <span className={styles.correctManchu} aria-hidden="true">{manchu}</span>}
-				</div>
-				<span id={`${id}-hint`} className={typed.trim() && !manchu ? styles.error : styles.hint}>
-					{typed.trim() && !manchu
-						? 'That has a letter Abkai doesn\'t use.'
-						: 'Use \' (or ‘) for the loanword marks, as in k\'.'}
-				</span>
-			</form>
-		</section>
+		<form
+			className={styles.typeForm}
+			onSubmit={(event) => {
+				event.preventDefault();
+				if (!manchu) return;
+				const abkai = standardAbkai(typed) ?? typed.trim();
+				// The model's own reading is no correction
+				onCorrect(abkai === box['prediction-abkai'] ? undefined : { manchu, abkai });
+			}}
+		>
+			<label htmlFor={id}>Or type your own, in Abkai</label>
+			<div className={styles.typeRow}>
+				<input
+					id={id}
+					type="text"
+					autoComplete="off"
+					autoCapitalize="off"
+					spellCheck={false}
+					value={typed}
+					aria-invalid={invalid}
+					aria-describedby={`${id}-hint`}
+					onChange={(event) => { setTyped(event.target.value); }}
+				/>
+				<button type="submit" disabled={!manchu}>Use</button>
+				{manchu && <span className={styles.typedManchu} aria-hidden="true">{manchu}</span>}
+			</div>
+			<span id={`${id}-hint`} className={invalid ? styles.error : styles.hint}>
+				{invalid
+					? 'That has a letter Abkai doesn\'t use.'
+					: 'Use \' (or ‘) for the loanword marks, as in k\'.'}
+			</span>
+		</form>
 	);
 }
 
-// The part of the page in a box, with the model's reading of it, the
-// dictionary words closest to it, and a way to correct it
+// The part of the page in a box beside the model's reading of it, and the
+// readings it could have to choose from: the model's (to mark as right, or
+// go back to), the closest dictionary words, or the user's own, typed in.
+// Or it can be marked as not Manchu.
 function BoxDialog({
-	box, flagged, suggests, correction, confirmed, onCorrect, onConfirm, onClose,
+	box, flagged, correction, confirmed, onCorrect, onConfirm, onClose,
 }: {
 	box: PageBox | undefined;
-	// Whether it's flagged as a possible misreading, and whether it still has
-	// a badge for that (it doesn't once marked as read right)
+	// Whether it's flagged as a possible misreading
 	flagged: boolean;
-	suggests: boolean;
 	// Whether the user marked its flagged reading as right, and how to change
 	// that
 	confirmed: boolean;
@@ -280,87 +259,164 @@ function BoxDialog({
 	useEffect(() => {
 		if (box && !dialog.current?.open) {
 			dialog.current?.showModal();
-			// Rather than the first suggestion, so Enter doesn't pick it
+			// Rather than the first choice, so Enter doesn't pick it
 			close.current?.focus();
 		}
 		if (!box && dialog.current?.open) dialog.current?.close();
 	}, [box]);
-	const manchu = box?.kind === 'manchu';
+
+	const header = (title: string, detail?: string) => (
+		<header className={styles.dialogHeader}>
+			<div>
+				<h4 id="box-dialog-title">{title}</h4>
+				{detail && <p className={styles.hint}>{detail}</p>}
+			</div>
+			<button
+				ref={close}
+				type="button"
+				className={styles.closeX}
+				aria-label="Close"
+				onClick={onClose}
+			>
+				×
+			</button>
+		</header>
+	);
+
+	let content: React.ReactNode = null;
+	if (box && box.kind !== 'manchu') {
+		content = (
+			<>
+				{header('Not Manchu')}
+				<div className={styles.dialogBody}>
+					<div className={styles.crop}>
+						<img src={box.image} alt="The part of the page in this box" />
+					</div>
+					<p>
+						{`The classifier gives it a ${percent(box['manchu-probability'])} chance of being Manchu, so the model didn't read it.`}
+					</p>
+				</div>
+				<footer className={styles.dialogFooter}>
+					<span />
+					<button type="button" onClick={onClose}>Close</button>
+				</footer>
+			</>
+		);
+	} else if (box) {
+		const read = box['prediction-abkai'] ?? '';
+		const notManchu = Boolean(correction?.notManchu);
+		const closest = box['closest-words'] ?? [];
+		const sources = (word: ClosestWord) => word.sources
+			.map((source) => SOURCES[source] ?? source).join(', ');
+		// The dictionary's own entry for the reading, if it has one
+		const entry = closest.find(({ distance }) => distance === 0);
+		const others = closest.filter((word) => word !== entry);
+		const typed = correction && !notManchu
+			&& !others.some(({ abkai }) => abkai === correction.abkai) ? correction : undefined;
+		const settled = !flagged || confirmed;
+		content = (
+			<>
+				{header(read || '(nothing read)', box.confidence !== null
+					? `The model's reading, ${percent(box.confidence)} confident` : undefined)}
+				<div className={styles.dialogBody}>
+					<div className={styles.crop}>
+						<img src={box.image} alt="The part of the page in this box" />
+						<span className={styles.dialogManchu} aria-hidden="true">
+							{box['prediction-manchu']}
+						</span>
+					</div>
+					<div className={styles.dialogMain}>
+						{box['low-confidence'] && (
+							<p className={styles.lowConfidenceNote}>
+								Low confidence, so the model&apos;s reading is left out of the
+								page&apos;s text.
+							</p>
+						)}
+						{notManchu && (
+							<p className={styles.statusNote}>
+								Marked as not Manchu: it stands as □ in the page&apos;s text.
+							</p>
+						)}
+						{flagged && confirmed && !correction && (
+							<p className={styles.statusNote}>
+								{'You marked the model\'s reading as right. '}
+								<button type="button" onClick={() => { onConfirm(false); }}>
+									Undo
+								</button>
+							</p>
+						)}
+						<section className={styles.choices}>
+							<h5>{flagged && !settled && !correction ? 'Did you mean?' : 'Reading'}</h5>
+							<ul>
+								<Choice
+									manchu={box['prediction-manchu'] ?? ''}
+									abkai={read}
+									details={[
+										'The model\'s reading',
+										entry ? `In ${sources(entry)}` : closest.length ? 'Not in the dictionaries' : '',
+									].filter(Boolean)}
+									current={!correction && settled}
+									action={correction ? 'Go back to it' : 'Mark as right'}
+									onPick={() => {
+										if (correction) onCorrect(undefined);
+										else onConfirm(true);
+									}}
+								/>
+								{others.map((word) => (
+									<Choice
+										key={word.abkai}
+										manchu={word.manchu}
+										abkai={word.abkai}
+										details={[
+											`${word.distance} ${word.distance === 1 ? 'change' : 'changes'} from the reading`,
+											sources(word),
+										]}
+										current={correction?.abkai === word.abkai && !notManchu}
+										action="Use this"
+										onPick={() => { onCorrect({ manchu: word.manchu, abkai: word.abkai }); }}
+									/>
+								))}
+								{typed && (
+									<Choice
+										manchu={typed.manchu}
+										abkai={typed.abkai}
+										details={['Your own reading']}
+										current
+									/>
+								)}
+							</ul>
+						</section>
+						<TypeReading key={boxKey(box)} box={box} onCorrect={onCorrect} />
+					</div>
+				</div>
+				<footer className={styles.dialogFooter}>
+					{notManchu ? (
+						<button type="button" onClick={() => { onCorrect(undefined); }}>
+							It&apos;s Manchu after all
+						</button>
+					) : (
+						<button type="button" onClick={() => { onCorrect(NOT_MANCHU); }}>
+							Not Manchu
+						</button>
+					)}
+					<button type="button" onClick={onClose}>Close</button>
+				</footer>
+			</>
+		);
+	}
 
 	return (
 		<dialog
 			ref={dialog}
 			className={styles.dialog}
+			aria-labelledby="box-dialog-title"
 			onClose={onClose}
 			// A click on the backdrop lands on the dialog itself
 			onClick={(event) => {
 				if (event.target === event.currentTarget) onClose();
 			}}
 		>
-			{box && (
-				<div className={styles.dialogBody}>
-					<img src={box.image} alt="The part of the page in this box" />
-					<div className={styles.dialogText}>
-						{manchu ? (
-							<>
-								<h4>Model Prediction</h4>
-								<p className={styles.dialogManchu}>{box['prediction-manchu']}</p>
-								<p className={styles.abkai}>{box['prediction-abkai']}</p>
-								{box.confidence !== null && (
-									<p className={styles.hint}>
-										{`Confidence: ${percent(box.confidence)}`}
-									</p>
-								)}
-								{box['low-confidence'] && (
-									<p className={styles.lowConfidenceNote}>
-										Low confidence, so this reading is left out of the page&apos;s
-										text.
-									</p>
-								)}
-								{box['closest-words']?.length ? (
-									<ClosestWords
-										words={box['closest-words']}
-										suggests={suggests && !correction}
-										current={correction?.abkai ?? box['prediction-abkai'] ?? ''}
-										onUse={({ manchu, abkai }) => {
-											onCorrect(abkai === box['prediction-abkai'] ? undefined : { manchu, abkai });
-										}}
-									/>
-								) : null}
-								{flagged && !correction && confirmed && (
-									<p className={styles.confirmedNote}>
-										{'You marked this reading as right. '}
-										<button type="button" onClick={() => { onConfirm(false); }}>
-											Undo
-										</button>
-									</p>
-								)}
-								{!correction?.notManchu && (
-									<div className={styles.verdicts}>
-										{flagged && !correction && !confirmed && (
-											<button type="button" onClick={() => { onConfirm(true); }}>
-												{`${box['prediction-abkai']} is right`}
-											</button>
-										)}
-										<button type="button" onClick={() => { onCorrect(NOT_MANCHU); }}>
-											Not Manchu
-										</button>
-									</div>
-								)}
-								<CorrectReading key={boxKey(box)} box={box} correction={correction} onCorrect={onCorrect} />
-							</>
-						) : (
-							<>
-								<h4>Not Manchu</h4>
-								<p>
-									{`The classifier gives it a ${percent(box['manchu-probability'])} chance of being Manchu, so the model didn't read it.`}
-								</p>
-							</>
-						)}
-						<button ref={close} type="button" onClick={onClose}>Close</button>
-					</div>
-				</div>
-			)}
+			{content}
 		</dialog>
 	);
 }
@@ -652,7 +708,6 @@ export default function PageResult({
 			<BoxDialog
 				box={open !== undefined ? page.boxes[open] : undefined}
 				flagged={open !== undefined && flaggedBox[open]}
-				suggests={open !== undefined && suggests[open]}
 				correction={open !== undefined ? corrections[boxKey(page.boxes[open])] : undefined}
 				confirmed={open !== undefined && Boolean(confirmed[boxKey(page.boxes[open])])}
 				onConfirm={(yes) => {
