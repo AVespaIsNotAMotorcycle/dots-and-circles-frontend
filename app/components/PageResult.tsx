@@ -785,7 +785,7 @@ function Legend({ compared, lowConfidence, other, flagged, corrected }: {
 // compares with the Abkai expected (the user's, or a sample page's
 // transcription)
 export default function PageResult({
-	page, expected = '', title = 'Page', id, onReread, corrections = {}, onCorrect,
+	page, expected = '', title = 'Page', id, onReread, rereadNote, corrections = {}, onCorrect,
 	confirmed = {}, onConfirm, boxId, onBoxClosed,
 }: {
 	page: ReadPage;
@@ -797,6 +797,9 @@ export default function PageResult({
 	// Reads the page again in edited boxes, rejecting with why it couldn't.
 	// Without it, the boxes can't be edited.
 	onReread?: (boxes: EditedBox[]) => Promise<void>;
+	// Shown while edited boxes wait to be read again, such as that the
+	// server's busy
+	rereadNote?: string;
 	// The user's words for some of its boxes, by boxKey, and how to change
 	// one's (undefined goes back to the model's)
 	corrections?: Corrections;
@@ -889,6 +892,7 @@ export default function PageResult({
 						},
 					} : undefined}
 				/>
+				{rereadNote && <p className={styles.hint} role="status">{rereadNote}</p>}
 				{rereadError && <p className={styles.error} role="alert">{rereadError}</p>}
 				<figcaption>
 					{editing && 'Boxes outlined in purple dashes are read again; the rest keep their reading and colour. '}

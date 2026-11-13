@@ -72,22 +72,60 @@ function openBox(id: string) {
 // The element id of a PDF's page number (from 1), for links to it
 const pdfPageId = (page: number) => `pdf-page-${page}`;
 
-// The server's {"error": ...} for a failed request, or fallback
+// A request that may succeed if tried again: the server busy (Heroku cuts
+// off a request after 30 seconds with a 503, and its own errors carry no
+// CORS header, so the browser sees no response at all), or ours timing out
+const busy = (error: unknown) => axios.isAxiosError(error)
+	&& (!error.response || [502, 503, 504].includes(error.response.status));
+
+// The server's {"error": ...} for a failed request, or why it may have
+// failed if the server was busy, or fallback
 const errorMessage = (error: unknown, fallback: string) => (
 	axios.isAxiosError<ErrorResponse>(error) && error.response?.data?.error
-) || fallback;
+) || (busy(error)
+	? 'The server is too busy right now, or couldn\'t be reached. Try again in a minute.'
+	: fallback);
+
+// How long to wait before each try again, so at most three tries
+const RETRY_DELAYS = [3000, 8000];
+
+// What a request does while it's tried again: whether it's still wanted (a
+// read that's been stopped or overtaken isn't), and onBusy(true) while it's
+// waiting to try again, then onBusy(false)
+type Retrying = { wanted: () => boolean; onBusy: (busy: boolean) => void };
+
+// Sends a request, trying again after a pause if the server was busy
+async function withRetries<T>(send: () => Promise<T>, { wanted, onBusy }: Retrying) {
+	try {
+		for (let attempt = 0; ; attempt++) {
+			try {
+				return await send();
+			} catch (error) {
+				if (attempt >= RETRY_DELAYS.length || !busy(error) || !wanted()) throw error;
+				onBusy(true);
+				await new Promise((resolve) => { setTimeout(resolve, RETRY_DELAYS[attempt]); });
+				if (!wanted()) throw error;
+			}
+		}
+	} finally {
+		onBusy(false);
+	}
+}
 
 // Leaves the boxes' own images out of the server's responses: they're most
-// of a response, and the close-up cuts each box from the page instead
-const NO_CROPS = { crops: 'false' };
+// of a response, and the close-up cuts each box from the page instead.
+// And gives up on a request after a minute, to try it again: Heroku has
+// given up on it by then.
+const REQUEST = { params: { crops: 'false' }, timeout: 60_000 };
 
 // Sends an image of a page to be read, shrunk first if it's big, and gives
 // the image sent with the reading, to send again to read edited boxes
-const postPage = async (file: File) => {
+const postPage = async (file: File, retrying: Retrying) => {
 	const sent = await shrinkForUpload(file);
 	const body = new FormData();
 	body.append('image', sent);
-	const { data } = await axios.post<Page>(`${BACKEND}/upload/multiple`, body, { params: NO_CROPS });
+	const { data } = await withRetries(
+		() => axios.post<Page>(`${BACKEND}/upload/multiple`, body, REQUEST), retrying);
 	return { data, sent };
 };
 
@@ -105,6 +143,10 @@ export default function Demo({ backendAwake = false }: {
 	// How many pages the PDF on show has, if the readings are a PDF's
 	const [pdfPages, setPdfPages] = useState<number>();
 	const [error, setError] = useState<string>();
+	// True while a page read is waiting to be tried again, the server busy
+	const [retrying, setRetrying] = useState(false);
+	// The reading whose edited boxes are waiting to be read again, likewise
+	const [rereadRetrying, setRereadRetrying] = useState<number>();
 	// The sample pages' names, from GET /pages
 	const [pageNames, setPageNames] = useState<string[]>([]);
 	// What a saved .txt of the readings is named after: the upload, the PDF
@@ -129,7 +171,7 @@ export default function Demo({ backendAwake = false }: {
 	// then the page, or the server's error (or fallback)
 	const request = <T extends Page,>(
 		loadingMessage: LoadingMessage,
-		send: () => Promise<{ data: T; sent?: File }>,
+		send: (retrying: Retrying) => Promise<{ data: T; sent?: File }>,
 		fallback: string,
 		expected: (result: T) => string,
 	) => {
@@ -139,7 +181,7 @@ export default function Demo({ backendAwake = false }: {
 		setLoading(loadingMessage);
 		setPdfPages(undefined);
 		setError(undefined);
-		inTurn(send)
+		inTurn(() => send({ wanted: () => current === run.current, onBusy: setRetrying }))
 			.then(({ data, sent }) => {
 				if (current !== run.current) return;
 				setReadings([newReading({ result: data, expected: expected(data), sent })]);
@@ -156,7 +198,7 @@ export default function Demo({ backendAwake = false }: {
 	// expected Abkai is made here
 	const readPage = (file: File, expected: string) => {
 		setSaveName(file.name.replace(/\.[^.]+$/, '') || 'reading');
-		request('readingPage', () => postPage(file), 'Couldn\'t read the page.',
+		request('readingPage', (retrying) => postPage(file, retrying), 'Couldn\'t read the page.',
 			() => expected);
 	};
 
@@ -184,7 +226,8 @@ export default function Demo({ backendAwake = false }: {
 				if (current !== run.current) return;
 				// Named "<the PDF>, page <n>.jpg"
 				if (page === 1) setSaveName(file.name.replace(/, page \d+\.\w+$/, ''));
-				const { data, sent } = await inTurn(() => postPage(file));
+				const { data, sent } = await inTurn(() => postPage(file,
+					{ wanted: () => current === run.current, onBusy: setRetrying }));
 				reading = newReading({ title, result: data, expected: expected(page), sent });
 			} catch (error) {
 				reading = {
@@ -226,16 +269,18 @@ export default function Demo({ backendAwake = false }: {
 				body.append('image', sent);
 				body.append('angle', String(old!.angle));
 				body.append('boxes', JSON.stringify(boxes));
-				return axios.post<Page>(url, body, { params: NO_CROPS });
+				return axios.post<Page>(url, body, REQUEST);
 			}
 			if (old && 'name' in old) {
-				return axios.post<Page>(url, { name: old.name, angle: old.angle, boxes },
-					{ params: NO_CROPS });
+				return axios.post<Page>(url, { name: old.name, angle: old.angle, boxes }, REQUEST);
 			}
 			// Nothing else to send it by: the page as shown, taken as it is
-			return axios.post<Page>(url, { image: old!.image, boxes }, { params: NO_CROPS });
+			return axios.post<Page>(url, { image: old!.image, boxes }, REQUEST);
 		};
-		return inTurn(send)
+		return inTurn(() => withRetries(send, {
+			wanted: () => current === run.current,
+			onBusy: (waiting) => { setRereadRetrying(waiting ? index : undefined); },
+		}))
 			.then(({ data }) => {
 				if (current !== run.current) return;
 				const result: ReadPage = { ...old!, ...data };
@@ -336,8 +381,10 @@ export default function Demo({ backendAwake = false }: {
 	// Loads the sample page with this name, or any one for ''
 	const loadPage = (name = '') => {
 		request('loadingPage',
-			() => axios.get<SamplePage>(`${BACKEND}/random`,
-				{ params: { source: 'page', ...NO_CROPS, ...(name && { name }) } }),
+			(retrying) => withRetries(() => axios.get<SamplePage>(`${BACKEND}/random`, {
+				...REQUEST,
+				params: { source: 'page', ...REQUEST.params, ...(name && { name }) },
+			}), retrying),
 			'Couldn\'t load a page.',
 			(result) => {
 				setSaveName(result.name);
@@ -384,8 +431,10 @@ export default function Demo({ backendAwake = false }: {
 					loading={Boolean(loading) || !backendAwake}
 					message={backendAwake && loading ? loading : 'wakingServer'}
 					text={backendAwake && progress
-						? `Reading page ${progress.page} of ${progress.pages}...`
-						: undefined}
+						? `Reading page ${progress.page} of ${progress.pages}${retrying ? ': the server is busy, trying again…' : '...'}`
+						: backendAwake && retrying
+							? 'The server is busy. Trying again…'
+							: undefined}
 				>
 					{progress && (
 						<button type="button" className={styles.stop} onClick={stop}>
@@ -411,6 +460,8 @@ export default function Demo({ backendAwake = false }: {
 							title={title}
 							id={pdfPages !== undefined ? pdfPageId(index + 1) : undefined}
 							onReread={(boxes) => reread(index, boxes)}
+							rereadNote={rereadRetrying === index
+								? 'The server is busy. Trying again…' : undefined}
 							corrections={corrections}
 							onCorrect={(box, correction) => { correct(index, box, correction); }}
 							confirmed={confirmed}
