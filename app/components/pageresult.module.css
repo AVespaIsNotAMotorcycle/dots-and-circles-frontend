@@ -422,6 +422,10 @@ button.choice:focus-visible {
 	margin-top: .5rem;
 	color: var(--color-foreground);
 }
+.editButtonTop {
+	margin-top: 0;
+	margin-bottom: .75rem;
+}
 .error {
 	color: red;
 }

@@ -894,11 +894,25 @@ export default function PageResult({
 		onBoxClosed?.(ruled);
 	};
 
+	// At the top and the bottom of the page, which can be taller than the
+	// window
+	const editButton = (place: 'top' | 'bottom') => !editing && onReread && (
+		<button
+			type="button"
+			className={[styles.editButton, place === 'top' && styles.editButtonTop]
+				.filter(Boolean).join(' ')}
+			onClick={() => { setEditingPage(page); }}
+		>
+			Edit Boxes
+		</button>
+	);
+
 	return (
 		<section className={styles.page} id={id}>
 			<h3>{title}</h3>
 			<div className={styles.reading}>
 			<figure className={styles.marked}>
+				{editButton('top')}
 				<PageImage
 					page={page}
 					statuses={statuses}
@@ -939,15 +953,7 @@ export default function PageResult({
 								: random.credit}
 						</span>
 					)}
-					{!editing && onReread && (
-						<button
-							type="button"
-							className={styles.editButton}
-							onClick={() => { setEditingPage(page); }}
-						>
-							Edit Boxes
-						</button>
-					)}
+					{editButton('bottom')}
 				</figcaption>
 			</figure>
 			{found ? (
