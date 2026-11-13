@@ -117,10 +117,14 @@
 	transition-property: background-color, color;
 	transition-duration: 0.2s;
 }
-.options label.chooseButton:hover,
-.options label.chooseButton:focus-within {
+.options label.chooseButton:hover {
 	background-color: var(--color-foreground);
 	color: var(--color-background);
+}
+/* Its input is hidden, so the label shows its focus */
+.options label.chooseButton:has(:focus-visible) {
+	outline: 3px solid var(--accent);
+	outline-offset: 2px;
 }
 .hint {
 	color: grey;
@@ -160,7 +164,6 @@
 	border-width: 1px;
 	color: var(--color-foreground);
 }
-.sample button:hover,
-.sample button:focus {
+.sample button:hover {
 	color: var(--color-background);
 }

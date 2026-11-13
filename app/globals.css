@@ -23,6 +23,15 @@ p + p {
 :root {
   --background: #ffffff;
   --foreground: #171717;
+  /* For what's focused or highlighted */
+  --accent: #1e6fd9;
+  --accent-soft: rgba(30, 111, 217, .15);
+}
+
+/* A ring for the keyboard's focus, not filling in what was just clicked */
+:focus-visible {
+	outline: 3px solid var(--accent);
+	outline-offset: 2px;
 }
 
 @theme inline {
@@ -180,8 +189,7 @@ button {
 	transition-property: background-color color;
 	transition-duration: 0.2s;
 }
-button:hover,
-button:focus {
+button:hover {
 	background-color: var(--color-foreground);
 	color: var(--color-background);
 	cursor: pointer;

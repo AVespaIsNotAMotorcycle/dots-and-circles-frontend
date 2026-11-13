@@ -81,6 +81,13 @@
 .manchuBox:focus-visible rect, .otherBox:focus-visible rect {
 	stroke-width: 4px;
 }
+/* An outline on an SVG shape isn't drawn everywhere, so the box shows it */
+.manchuBox:focus-visible, .otherBox:focus-visible {
+	outline: none;
+}
+.manchuBox:focus-visible > rect, .otherBox:focus-visible > rect {
+	stroke: var(--accent);
+}
 .manchuBox:hover rect, .manchuBox:focus-visible rect {
 	fill: rgba(255, 255, 255, .8);
 }
@@ -146,11 +153,6 @@
 	line-height: 1;
 	padding: .125rem .5rem;
 }
-/* Focused as the dialog opens, it's only filled in for the keyboard */
-.closeX:focus:not(:focus-visible) {
-	background: transparent;
-	color: var(--foreground);
-}
 .dialogBody {
 	display: flex;
 	gap: 1.25rem;
@@ -180,7 +182,7 @@ svg.cropImage {
 /* The box itself, within the margin around it */
 .cropBox {
 	fill: none;
-	stroke: #1e6fd9;
+	stroke: var(--accent);
 	stroke-width: 2px;
 	vector-effect: non-scaling-stroke;
 }
@@ -249,14 +251,14 @@ svg.cropImage {
 	color: var(--foreground);
 	text-align: left;
 }
-button.choice:hover, button.choice:focus-visible {
+button.choice:hover {
 	border-color: var(--foreground);
 	background: #f5f5f5;
 	color: var(--foreground);
 }
-button.choice:focus:not(:focus-visible) {
-	background: var(--background);
-	color: var(--foreground);
+button.choice:focus-visible {
+	border-color: var(--accent);
+	outline-offset: 0;
 }
 .currentChoice {
 	border-color: #0d9488;
@@ -290,7 +292,7 @@ button.choice:focus:not(:focus-visible) {
 	font-weight: 700;
 }
 .choiceAction {
-	color: #1e6fd9;
+	color: var(--accent);
 }
 .choiceCurrent {
 	color: #0d9488;
@@ -446,10 +448,11 @@ button.choice:focus:not(:focus-visible) {
 	outline: none;
 }
 .textWord:hover, .textWord:focus-visible {
-	background: rgba(30, 111, 217, .15);
+	background: var(--accent-soft);
 }
 .textWord:focus-visible {
-	box-shadow: 0 0 0 2px #1e6fd9;
+	outline: none;
+	box-shadow: 0 0 0 2px var(--accent);
 }
 .correctedWord {
 	color: #0d9488;
