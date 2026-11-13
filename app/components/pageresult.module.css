@@ -354,6 +354,11 @@ button.choice:focus-visible {
 	min-width: 0;
 	max-width: 100%;
 }
+/* A grid, as Safari gives vertical text no width in a box that fits its
+   content: in a grid it's as wide as its columns, up to the room there is */
+.manchuSection {
+	display: grid;
+}
 
 /* Each line of the text is a column of the page, read left to right */
 .manchu {

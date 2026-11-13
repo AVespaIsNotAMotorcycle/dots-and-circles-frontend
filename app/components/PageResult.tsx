@@ -938,7 +938,7 @@ export default function PageResult({
 			</figure>
 			{found ? (
 				<div className={styles.texts}>
-					<section>
+					<section className={styles.manchuSection}>
 						<h4>Manchu</h4>
 						<PageText
 							lines={textLines(page, corrections, 'manchu')}
