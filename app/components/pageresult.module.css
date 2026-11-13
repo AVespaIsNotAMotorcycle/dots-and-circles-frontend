@@ -225,7 +225,7 @@
 	stroke-width: 1.5px;
 	vector-effect: non-scaling-stroke;
 }
-.manchuBox .badge text {
+.manchuBox .badge text, .otherBox .badge text {
 	fill: white;
 	writing-mode: horizontal-tb;
 	text-anchor: middle;
@@ -270,7 +270,7 @@
 .manchuBox.corrected > text {
 	fill: #115e59;
 }
-.manchuBox .correctedBadge circle {
+.manchuBox .correctedBadge circle, .otherBox .correctedBadge circle {
 	fill: #0d9488;
 }
 
@@ -370,4 +370,24 @@
 }
 .correctedWordBadge {
 	background: #0d9488;
+}
+
+/* Marking a flagged reading as right, or the box as not Manchu, and the
+   note once a reading's marked right */
+.verdicts {
+	display: flex;
+	flex-wrap: wrap;
+	gap: .5rem;
+}
+.verdicts button {
+	padding: .25rem .5rem;
+}
+.confirmedNote {
+	border-left: 4px solid green;
+	padding-left: .5rem;
+}
+.confirmedNote button {
+	margin-left: .25rem;
+	padding: .25rem .5rem;
+	font-size: .875rem;
 }

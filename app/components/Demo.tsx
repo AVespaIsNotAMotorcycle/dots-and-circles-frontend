@@ -12,9 +12,10 @@ import type { ReadPage } from './PageResult';
 import PdfSummary from './PdfSummary';
 import SamplePageForm from './SamplePageForm';
 import UploadForm from './UploadForm';
-import { boxKey } from './corrections';
+import { boxKey, unresolvedFlags } from './corrections';
+import FlaggedWords from './FlaggedWords';
 import type {
-	Correction, Corrections, EditedBox, ErrorResponse, Page, PageBox, SamplePage,
+	Confirmed, Correction, Corrections, EditedBox, ErrorResponse, Page, PageBox, SamplePage,
 } from './types';
 
 const BACKEND = process.env.NEXT_PUBLIC_BACKEND
@@ -30,7 +31,25 @@ type Reading = {
 	// The user's words for some of its boxes, which outlast reading it again
 	// in edited boxes, as the boxes they're for keep their place
 	corrections?: Corrections;
+	// The boxes whose flagged reading the user marked as right, which last
+	// as the corrections do
+	confirmed?: Confirmed;
 };
+
+// The data-box-id of box index of readings[reading]'s page
+const boxId = (reading: number, box: number) => `reading-${reading}-box-${box}`;
+
+// Opens a box close up, as clicking it does, with it scrolled into view and
+// focused behind the dialog, so the page is there when it closes. In the
+// editor, where the page's boxes aren't drawn, its word in the text stands
+// in.
+function openBox(id: string) {
+	const element = document.querySelector<HTMLElement | SVGElement>(`[data-box-id="${id}"]`);
+	if (!element) return;
+	element.scrollIntoView({ block: 'center' });
+	element.focus({ preventScroll: true });
+	element.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+}
 
 // The element id of a PDF's page number (from 1), for links to it
 const pdfPageId = (page: number) => `pdf-page-${page}`;
@@ -190,6 +209,34 @@ export default function Demo({ backendAwake = false }: {
 		}));
 	};
 
+	// Marks a flagged box's reading as right, or takes that back
+	const confirm = (index: number, box: PageBox, yes: boolean) => {
+		setReadings((previous) => previous.map((reading, i) => {
+			if (i !== index) return reading;
+			const confirmed = { ...reading.confirmed };
+			if (yes) confirmed[boxKey(box)] = true;
+			else delete confirmed[boxKey(box)];
+			return { ...reading, confirmed };
+		}));
+	};
+
+	// The flagged words still to check, on every page on show, in order
+	const toCheck = readings.flatMap(({ result, expected, corrections, confirmed }, reading) => (
+		result
+			? unresolvedFlags(result, expected, corrections, confirmed)
+				.map((box) => ({ reading, box }))
+			: []));
+	// The last one gone to, so Next goes on from it
+	const [lastChecked, setLastChecked] = useState<{ reading: number; box: number }>();
+	const nextToCheck = () => {
+		const next = toCheck.find(({ reading, box }) => !lastChecked
+			|| reading > lastChecked.reading
+			|| (reading === lastChecked.reading && box > lastChecked.box)) ?? toCheck[0];
+		if (!next) return;
+		setLastChecked(next);
+		openBox(boxId(next.reading, next.box));
+	};
+
 	// Loads the sample page with this name, or any one for ''
 	const loadPage = (name = '') => {
 		request('loadingPage',
@@ -243,7 +290,9 @@ export default function Demo({ backendAwake = false }: {
 			{pdfPages !== undefined && (
 				<PdfSummary readings={readings} pages={pdfPages} pageId={pdfPageId} />
 			)}
-			{readings.map(({ title, result, expected, error: problem, corrections }, index) => (
+			{readings.map(({
+				title, result, expected, error: problem, corrections, confirmed,
+			}, index) => (
 				result
 					? (
 						<PageResult
@@ -255,6 +304,9 @@ export default function Demo({ backendAwake = false }: {
 							onReread={(boxes) => reread(index, boxes)}
 							corrections={corrections}
 							onCorrect={(box, correction) => { correct(index, box, correction); }}
+							confirmed={confirmed}
+							onConfirm={(box, yes) => { confirm(index, box, yes); }}
+							boxId={(box) => boxId(index, box)}
 						/>
 					)
 					: (
@@ -268,6 +320,7 @@ export default function Demo({ backendAwake = false }: {
 						</section>
 					)
 			))}
+			<FlaggedWords count={toCheck.length} onNext={nextToCheck} />
 		</section>
 	);
 }

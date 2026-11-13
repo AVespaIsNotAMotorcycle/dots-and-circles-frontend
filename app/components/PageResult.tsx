@@ -2,12 +2,14 @@ import { useEffect, useRef, useState } from 'react';
 
 import BoxEditor from './BoxEditor';
 import type { BoxStatus } from './BoxEditor';
-import { boxKey, textLines } from './corrections';
+import { NOT_MANCHU, boxKey, textLines } from './corrections';
 import type { TextWord } from './corrections';
-import { alignWords, boxStatuses, pageWords, wordLetters, wordsRight } from './pagecompare';
+import {
+	alignWords, boxStatuses, flaggedBoxes, pageWords, wordLetters, wordsRight,
+} from './pagecompare';
 import { abkaiToManchu, standardAbkai } from './romanization';
 import type {
-	ClosestWord, Correction, Corrections, EditedBox, Page, PageBox, SamplePage,
+	ClosestWord, Confirmed, Correction, Corrections, EditedBox, Page, PageBox, SamplePage,
 } from './types';
 import useImageScale from './useImageScale';
 import styles from './pageresult.module.css';
@@ -74,24 +76,16 @@ const SOURCES: Record<ClosestWord['sources'][number], string> = {
 	norman: 'Norman\'s dictionary',
 };
 
-// Whether a box's closest dictionary words are worth a look: with text to
-// compare with, when it was read wrong, and without, when its reading isn't
-// a dictionary word
-function suggestsWords(box: PageBox, status: 'right' | 'wrong' | undefined,
-	compared: boolean) {
-	const closest = box['closest-words'];
-	if (box.kind !== 'manchu' || !closest?.length) return false;
-	return compared ? status === 'wrong' : closest[0].distance > 0;
-}
-
 // One box on the page. Manchu has its Abkai reading written down it, and is
 // green if read right, red if read wrong, blue with nothing to compare it
 // with, and yellow if read with too little confidence to be in the text.
 // Other text is grey. A box whose closest dictionary words are worth a look
 // has a badge on its corner. One the user corrected shows their word in
 // teal, with a pencil badge. Clicking it (or Enter or Space) calls onOpen.
-function BoxOutline({ box, status, suggests, correction, badge, onOpen }: {
+function BoxOutline({ box, id, status, suggests, correction, badge, onOpen }: {
 	box: PageBox;
+	// Its data-box-id, so it can be found to go to
+	id?: string;
 	correction?: Correction;
 	// How its reading compares with the expected text, if it does
 	status?: 'right' | 'wrong';
@@ -105,20 +99,23 @@ function BoxOutline({ box, status, suggests, correction, badge, onOpen }: {
 	const verdict = status === 'right' ? ', read right'
 		: status === 'wrong' ? ', read wrong' : '';
 	const read = box['prediction-abkai'] ?? '';
-	const reading = correction?.abkai ?? read;
+	// Marked by the user as not Manchu, it's drawn as other text
+	const notManchu = Boolean(correction?.notManchu);
+	const reading = notManchu ? '' : correction?.abkai ?? read;
 	// Written top to bottom, as wide as the box allows, but no longer than it
 	const fontSize = Math.min(box.w * 0.6,
 		(box.h * 0.9) / Math.max(reading.length * 0.6, 1));
 	return (
 		<g
-			className={[manchu ? styles.manchuBox : styles.otherBox,
-				manchu && !unsure && styles[status ?? 'unchecked'],
-				unsure && styles.lowConfidence,
-				correction && styles.corrected].filter(Boolean).join(' ')}
+			className={[manchu && !notManchu ? styles.manchuBox : styles.otherBox,
+				manchu && !notManchu && !unsure && styles[status ?? 'unchecked'],
+				manchu && !notManchu && unsure && styles.lowConfidence,
+				correction && !notManchu && styles.corrected].filter(Boolean).join(' ')}
+			data-box-id={id}
 			role="button"
 			tabIndex={0}
 			aria-label={manchu
-				? `Manchu word read as ${read}${unsure ? ', with low confidence' : verdict}${correction ? `, corrected to ${correction.abkai}` : suggests ? ', with close dictionary words' : ''}`
+				? `Manchu word read as ${read}${unsure ? ', with low confidence' : verdict}${notManchu ? ', marked as not Manchu' : correction ? `, corrected to ${correction.abkai}` : suggests ? ', with close dictionary words' : ''}`
 				: 'Other text'}
 			onClick={onOpen}
 			onKeyDown={(event) => {
@@ -209,9 +206,13 @@ function CorrectReading({ box, correction, onCorrect }: {
 			<h4>Your reading</h4>
 			{correction && (
 				<p className={styles.correctedNote}>
-					{'Corrected to '}
-					<strong>{correction.abkai}</strong>
-					{'. '}
+					{correction.notManchu ? 'Marked as not Manchu. ' : (
+						<>
+							{'Corrected to '}
+							<strong>{correction.abkai}</strong>
+							{'. '}
+						</>
+					)}
 					<button type="button" onClick={() => { onCorrect(undefined); }}>
 						Undo correction
 					</button>
@@ -228,7 +229,7 @@ function CorrectReading({ box, correction, onCorrect }: {
 				}}
 			>
 				<label htmlFor={id}>
-					{correction ? 'Or type another, in Abkai:' : 'Type the word as it should be read, in Abkai:'}
+					{correction && !correction.notManchu ? 'Or type another, in Abkai:' : 'Type the word as it should be read, in Abkai:'}
 				</label>
 				<div className={styles.correctRow}>
 					<input
@@ -257,10 +258,18 @@ function CorrectReading({ box, correction, onCorrect }: {
 
 // The part of the page in a box, with the model's reading of it, the
 // dictionary words closest to it, and a way to correct it
-function BoxDialog({ box, suggests, correction, onCorrect, onClose }: {
+function BoxDialog({
+	box, flagged, suggests, correction, confirmed, onCorrect, onConfirm, onClose,
+}: {
 	box: PageBox | undefined;
-	// Whether the box has a badge for its closest words
+	// Whether it's flagged as a possible misreading, and whether it still has
+	// a badge for that (it doesn't once marked as read right)
+	flagged: boolean;
 	suggests: boolean;
+	// Whether the user marked its flagged reading as right, and how to change
+	// that
+	confirmed: boolean;
+	onConfirm: (confirmed: boolean) => void;
 	// The user's word for it, if they corrected it, and how to change that
 	correction?: Correction;
 	onCorrect: (correction?: Correction) => void;
@@ -318,6 +327,26 @@ function BoxDialog({ box, suggests, correction, onCorrect, onClose }: {
 										}}
 									/>
 								) : null}
+								{flagged && !correction && confirmed && (
+									<p className={styles.confirmedNote}>
+										{'You marked this reading as right. '}
+										<button type="button" onClick={() => { onConfirm(false); }}>
+											Undo
+										</button>
+									</p>
+								)}
+								{!correction?.notManchu && (
+									<div className={styles.verdicts}>
+										{flagged && !correction && !confirmed && (
+											<button type="button" onClick={() => { onConfirm(true); }}>
+												{`${box['prediction-abkai']} is right`}
+											</button>
+										)}
+										<button type="button" onClick={() => { onCorrect(NOT_MANCHU); }}>
+											Not Manchu
+										</button>
+									</div>
+								)}
 								<CorrectReading key={boxKey(box)} box={box} correction={correction} onCorrect={onCorrect} />
 							</>
 						) : (
@@ -339,8 +368,10 @@ function BoxDialog({ box, suggests, correction, onCorrect, onClose }: {
 // The page with its boxes drawn over it, in the page image's own pixels,
 // each Manchu box coloured by how it compares with the expected Abkai. While
 // editing, the boxes can be changed and sent with onSubmit to be read again.
-function PageImage({ page, statuses, suggests, corrections, onOpen, editing }: {
+function PageImage({ page, statuses, suggests, corrections, boxId, onOpen, editing }: {
 	page: Page;
+	// Each box's data-box-id, so it can be found to go to
+	boxId?: (index: number) => string;
 	// How each of page.boxes compares with the expected text, and whether
 	// its closest dictionary words are worth a look
 	statuses: ('right' | 'wrong' | undefined)[];
@@ -402,6 +433,7 @@ function PageImage({ page, statuses, suggests, corrections, onOpen, editing }: {
 					<BoxOutline
 						key={key}
 						box={box}
+						id={boxId?.(key)}
 						status={statuses[key]}
 						suggests={suggests[key]}
 						correction={box.kind === 'manchu' ? corrections[boxKey(box)] : undefined}
@@ -418,8 +450,9 @@ function PageImage({ page, statuses, suggests, corrections, onOpen, editing }: {
 // corrections in place. Each word read from a box opens that box close up,
 // as clicking the box does, and is marked as the box is: a ? if its closest
 // dictionary words are worth a look, or a ✎ in teal if corrected.
-function PageText({ lines, suggests, corrected, script, onOpen }: {
+function PageText({ lines, suggests, corrected, script, boxId, onOpen }: {
 	lines: TextWord[][];
+	boxId?: (index: number) => string;
 	suggests: boolean[];
 	// Whether each of the page's boxes was corrected
 	corrected: boolean[];
@@ -442,6 +475,7 @@ function PageText({ lines, suggests, corrected, script, onOpen }: {
 								<span
 									className={[styles.textWord,
 										corrected[box] && styles.correctedWord].filter(Boolean).join(' ')}
+									data-box-id={boxId?.(box)}
 									role="button"
 									tabIndex={0}
 									aria-label={`${word}${mark === '✎' ? ', corrected' : mark ? ', with close dictionary words' : ''}. Show its box closer.`}
@@ -478,6 +512,7 @@ function PageText({ lines, suggests, corrected, script, onOpen }: {
 // transcription)
 export default function PageResult({
 	page, expected = '', title = 'Page', id, onReread, corrections = {}, onCorrect,
+	confirmed = {}, onConfirm, boxId,
 }: {
 	page: ReadPage;
 	expected?: string;
@@ -492,6 +527,12 @@ export default function PageResult({
 	// one's (undefined goes back to the model's)
 	corrections?: Corrections;
 	onCorrect?: (box: PageBox, correction?: Correction) => void;
+	// The boxes whose flagged reading the user marked as right, by boxKey,
+	// and how to mark or unmark one
+	confirmed?: Confirmed;
+	onConfirm?: (box: PageBox, confirmed: boolean) => void;
+	// Each box's data-box-id, on it and its words, so it can be found to go to
+	boxId?: (index: number) => string;
 }) {
 	const random = 'transcription' in page ? page : undefined;
 	// The page whose boxes are being edited, so a new page ends the editing
@@ -513,10 +554,12 @@ export default function PageResult({
 	// Whether there's any text to compare the reading with
 	const compared = pageWords(expected).length > 0;
 	const statuses = boxStatuses(page.boxes, expected);
-	// Which boxes have a badge for their closest dictionary words, and which
-	// the user corrected
-	const suggests = page.boxes.map((box, index) => (
-		suggestsWords(box, statuses[index], compared)));
+	// Which boxes are flagged as possible misreadings, which still have a
+	// badge for that (not once marked as read right), and which the user
+	// corrected
+	const flaggedBox = flaggedBoxes(page.boxes, expected);
+	const suggests = flaggedBox.map((flagged, index) => (
+		flagged && !confirmed[boxKey(page.boxes[index])]));
 	const flagged = suggests.some(Boolean);
 	const isCorrected = page.boxes.map((box) => (
 		box.kind === 'manchu' && Boolean(corrections[boxKey(box)])));
@@ -537,6 +580,7 @@ export default function PageResult({
 					statuses={statuses}
 					suggests={suggests}
 					corrections={corrections}
+					boxId={boxId}
 					onOpen={openBox}
 					editing={editing ? {
 						busy: rereading,
@@ -580,6 +624,7 @@ export default function PageResult({
 							suggests={suggests}
 							corrected={isCorrected}
 							script="manchu"
+							boxId={boxId}
 							onOpen={openBox}
 						/>
 					</section>
@@ -590,6 +635,7 @@ export default function PageResult({
 							suggests={suggests}
 							corrected={isCorrected}
 							script="abkai"
+							boxId={boxId}
 							onOpen={openBox}
 						/>
 						<p className={styles.hint}>
@@ -605,8 +651,15 @@ export default function PageResult({
 			</div>
 			<BoxDialog
 				box={open !== undefined ? page.boxes[open] : undefined}
+				flagged={open !== undefined && flaggedBox[open]}
 				suggests={open !== undefined && suggests[open]}
 				correction={open !== undefined ? corrections[boxKey(page.boxes[open])] : undefined}
+				confirmed={open !== undefined && Boolean(confirmed[boxKey(page.boxes[open])])}
+				onConfirm={(yes) => {
+					if (open === undefined || !onConfirm) return;
+					onConfirm(page.boxes[open], yes);
+					if (yes) closeBox();
+				}}
 				onCorrect={(correction) => {
 					if (open === undefined || !onCorrect) return;
 					onCorrect(page.boxes[open], correction);

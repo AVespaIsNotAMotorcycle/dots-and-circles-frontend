@@ -156,3 +156,20 @@ export function wordsRight(abkai: string, expected: string) {
 		.filter(({ status }) => status === 'right').length;
 	return { right, total: truth.length };
 }
+
+// Whether a box's closest dictionary words are worth a look, as a possible
+// misreading: with text to compare with, when it was read wrong, and
+// without, when its reading isn't a dictionary word
+export function suggestsWords(box: PageBox, status: 'right' | 'wrong' | undefined,
+	compared: boolean) {
+	const closest = box['closest-words'];
+	if (box.kind !== 'manchu' || !closest?.length) return false;
+	return compared ? status === 'wrong' : closest[0].distance > 0;
+}
+
+// Which of a page's boxes are flagged as possible misreadings, in order
+export function flaggedBoxes(boxes: PageBox[], expected: string) {
+	const compared = pageWords(expected).length > 0;
+	const statuses = boxStatuses(boxes, expected);
+	return boxes.map((box, index) => suggestsWords(box, statuses[index], compared));
+}

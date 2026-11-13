@@ -1,7 +1,12 @@
 // The user's corrections of a page's readings, and the page's text with
 // them in place
 
-import type { Corrections, Page, PageBox } from './types';
+import { flaggedBoxes } from './pagecompare';
+import type { Confirmed, Correction, Corrections, Page, PageBox } from './types';
+
+// A Manchu box the user says isn't Manchu, which stands in the text as
+// other text does
+export const NOT_MANCHU: Correction = { manchu: '□', abkai: '□', notManchu: true };
 
 // Which box a correction is for. A box keeps its place when the page is
 // read again in edited boxes, unless the user moved or resized it, so its
@@ -59,3 +64,14 @@ export function correctedText(page: Page, corrections: Corrections) {
 		abkai: join(textLines(page, corrections, 'abkai')),
 	};
 }
+
+// The boxes of a page still flagged as possible misreadings, by index:
+// those the user hasn't corrected or marked as read right
+export const unresolvedFlags = (page: Page, expected: string,
+	corrections: Corrections = {}, confirmed: Confirmed = {}) => (
+	flaggedBoxes(page.boxes, expected)
+		.map((flagged, index) => {
+			const key = boxKey(page.boxes[index]);
+			return flagged && !corrections[key] && !confirmed[key] ? index : -1;
+		})
+		.filter((index) => index >= 0));

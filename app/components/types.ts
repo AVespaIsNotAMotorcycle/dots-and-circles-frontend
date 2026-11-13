@@ -122,7 +122,11 @@ export type EditedBox = {
 };
 
 // The user's own reading of a Manchu box, in place of the model's: picked
-// from its closest dictionary words or typed in Abkai
-export type Correction = { manchu: string; abkai: string };
+// from its closest dictionary words or typed in Abkai, or that it isn't
+// Manchu, which reads as □ like other text
+export type Correction = { manchu: string; abkai: string; notManchu?: true };
 // A page's corrections, by boxKey
 export type Corrections = Record<string, Correction>;
+// The boxes of a page whose flagged reading the user marked as right, by
+// boxKey
+export type Confirmed = Record<string, true>;
