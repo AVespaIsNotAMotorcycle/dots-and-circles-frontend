@@ -740,7 +740,7 @@ function Legend({ compared, lowConfidence, other, flagged, corrected }: {
 			: []),
 		...(other ? [{ mark: <span className={`${styles.swatch} ${styles.swatchOther}`} />, label: 'Other text, such as Chinese' }] : []),
 		...(flagged
-			? [{ mark: <span className={styles.legendBadge}>?</span>, label: compared ? 'Read wrong: see close dictionary words' : 'Not a dictionary word: see close ones' }]
+			? [{ mark: <span className={styles.legendBadge}>?</span>, label: 'Possible misreading: see close dictionary words' }]
 			: []),
 		...(corrected
 			? [{ mark: <span className={`${styles.legendBadge} ${styles.legendCorrected}`}>✎</span>, label: 'Your correction' }]
