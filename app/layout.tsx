@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import Header from "./components/Header";
 import "./globals.css";
+import { SITE_URL } from "./site";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -15,7 +16,7 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   // Makes the Open Graph image's URL absolute
-  metadataBase: new URL("https://dots-and-circles.sasha-m-ebersole.com"),
+  metadataBase: new URL(SITE_URL),
   title: "Dots and Circles",
   description: "Manchu OCR from scratch.",
 };
