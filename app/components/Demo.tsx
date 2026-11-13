@@ -12,6 +12,7 @@ import type { ReadPage } from './PageResult';
 import PdfSummary from './PdfSummary';
 import SamplePageForm from './SamplePageForm';
 import SaveText from './SaveText';
+import { loadChecks, pageKey, saveChecks } from './savedChecks';
 import UploadForm from './UploadForm';
 import { boxKey, unresolvedFlags } from './corrections';
 import FlaggedWords from './FlaggedWords';
@@ -35,7 +36,17 @@ type Reading = {
 	// The boxes whose flagged reading the user marked as right, which last
 	// as the corrections do
 	confirmed?: Confirmed;
+	// Where those are kept in this browser: from the page as first read, so
+	// it stays the same when it's read again in edited boxes
+	storageKey?: string;
 };
+
+// A page just read, with any checks kept for it from before
+function newReading(reading: Omit<Reading, 'storageKey'>): Reading {
+	if (!reading.result) return reading;
+	const storageKey = pageKey(reading.result.image);
+	return { ...reading, ...loadChecks(storageKey), storageKey };
+}
 
 // The data-box-id of box index of readings[reading]'s page
 const boxId = (reading: number, box: number) => `reading-${reading}-box-${box}`;
@@ -118,7 +129,7 @@ export default function Demo({ backendAwake = false }: {
 		inTurn(send)
 			.then(({ data }) => {
 				if (current !== run.current) return;
-				setReadings([{ result: data, expected: expected(data) }]);
+				setReadings([newReading({ result: data, expected: expected(data) })]);
 			})
 			.catch((error) => {
 				if (current === run.current) setError(errorMessage(error, fallback));
@@ -161,7 +172,7 @@ export default function Demo({ backendAwake = false }: {
 				// Named "<the PDF>, page <n>.jpg"
 				if (page === 1) setSaveName(file.name.replace(/, page \d+\.\w+$/, ''));
 				const { data } = await inTurn(() => postPage(file));
-				reading = { title, result: data, expected: expected(page) };
+				reading = newReading({ title, result: data, expected: expected(page) });
 			} catch (error) {
 				reading = {
 					title, expected: expected(page),
@@ -282,6 +293,13 @@ export default function Demo({ backendAwake = false }: {
 	};
 
 	// Without the list of pages, only a random one can be picked
+	// Keeps each page's checks as they change
+	useEffect(() => {
+		for (const { storageKey, corrections, confirmed } of readings) {
+			if (storageKey) saveChecks(storageKey, { corrections, confirmed });
+		}
+	}, [readings]);
+
 	useEffect(() => {
 		if (!backendAwake) return;
 		axios.get<{ pages: string[] }>(`${BACKEND}/pages`)

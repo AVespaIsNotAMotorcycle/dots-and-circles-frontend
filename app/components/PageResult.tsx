@@ -774,7 +774,7 @@ export default function PageResult({
 						<p className={styles.hint}>
 							A line per column. □ is a box of other text, such as Chinese.
 							Click a word to see its box closer.
-							{corrected > 0 && ` With your ${corrected} ${corrected === 1 ? 'correction' : 'corrections'}.`}
+							{corrected > 0 && ` With your ${corrected} ${corrected === 1 ? 'correction' : 'corrections'}, kept in this browser.`}
 						</p>
 					</section>
 				</div>
