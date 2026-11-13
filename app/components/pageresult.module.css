@@ -288,6 +288,11 @@ button.choice:focus-visible {
 	color: grey;
 	font-size: .8125rem;
 }
+/* The verb a suggested word is a form of */
+.choiceLemma {
+	color: var(--color-foreground);
+	font-weight: 700;
+}
 .choiceAction, .choiceCurrent {
 	margin-top: .25rem;
 	font-size: .8125rem;

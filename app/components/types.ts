@@ -48,8 +48,15 @@ export type ClosestWord = {
 	norman?: string;
 	// The edit distance from the reading, ignoring its punctuation
 	distance: number;
-	// The dictionaries listing it: Wiktionary and Norman's
+	// The dictionaries listing it: Wiktionary and Norman's (for a verb form,
+	// its verb's)
 	sources: ('kaikki' | 'norman')[];
+	// For a form of a verb, such as genefi, rather than an entry: the verb's
+	// entry (genembi) and the affixes on its stem, in Norman's romanization
+	// (["-fi"]). null for an entry, and missing from a server from before
+	// it matched verb forms.
+	lemma?: { manchu: string; abkai: string; norman: string } | null;
+	affixes?: string[] | null;
 };
 
 // One box found on a page by POST /upload/multiple

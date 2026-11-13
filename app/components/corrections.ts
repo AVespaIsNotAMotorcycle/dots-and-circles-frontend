@@ -2,7 +2,7 @@
 // them in place
 
 import { flaggedBoxes } from './pagecompare';
-import { romanizeText } from './romanization';
+import { romanize, romanizeText, toManchu } from './romanization';
 import type { Romanization } from './romanization';
 import type { ClosestWord, Confirmed, Correction, Corrections, Page, PageBox } from './types';
 
@@ -41,6 +41,23 @@ export function correctionReading(correction: Correction, script: Script) {
 // A dictionary word in a romanization
 export const closestReading = (word: ClosestWord, romanization: Romanization) => (
 	romanization === 'abkai' ? word.abkai : word.norman ?? romanizeText(word.manchu, 'norman'));
+
+// For a dictionary word that's a form of a verb, the verb and the affixes
+// on its stem as one ending (-bu- and -ha as -bu-ha), in a romanization
+// (the server gives affixes in Norman's)
+export function closestForm(word: ClosestWord, romanization: Romanization) {
+	if (!word.lemma || !word.affixes?.length) return undefined;
+	const affix = (norman: string) => {
+		if (romanization === 'norman') return norman;
+		const [, before, letters, after] = /^(-?)(.*?)(-?)$/.exec(norman) ?? ['', '', norman, ''];
+		const manchu = toManchu(letters, 'norman');
+		return manchu === undefined ? norman : `${before}${romanize(manchu, romanization)}${after}`;
+	};
+	return {
+		lemma: word.lemma[romanization],
+		ending: word.affixes.map(affix).join('').replace(/-+/g, '-'),
+	};
+}
 
 // The page's text in a script, as the server gave it (Norman romanized here
 // if the server didn't send it)

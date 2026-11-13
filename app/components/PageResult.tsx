@@ -3,7 +3,7 @@ import { useEffect, useId, useRef, useState } from 'react';
 import BoxEditor from './BoxEditor';
 import type { BoxStatus } from './BoxEditor';
 import {
-	NOT_MANCHU, boxKey, boxReading, closestReading, correctionReading, textLines,
+	NOT_MANCHU, boxKey, boxReading, closestForm, closestReading, correctionReading, textLines,
 } from './corrections';
 import type { Script, TextWord } from './corrections';
 import {
@@ -186,12 +186,16 @@ type ChoiceProps = {
 	// Romanized, as the user has chosen
 	reading: string;
 	details: string[];
+	// For a form of a verb, the verb and the affixes on its stem
+	form?: { lemma: string; ending: string };
 	current: boolean;
 	action?: string;
 	onPick?: () => void;
 };
 
-function Choice({ manchu, reading, details, current, action, onPick, shortcut }: ChoiceProps & {
+function Choice({
+	manchu, reading, details, form, current, action, onPick, shortcut,
+}: ChoiceProps & {
 	// The number key that picks it, if any
 	shortcut?: number;
 }) {
@@ -200,6 +204,14 @@ function Choice({ manchu, reading, details, current, action, onPick, shortcut }:
 			<span className={styles.choiceManchu} lang={MANCHU_LANG} aria-hidden="true">{manchu}</span>
 			<span className={styles.choiceText}>
 				<span className={styles.choiceWord} lang={ROMANIZED_LANG}>{reading}</span>
+				{form && (
+					<span className={styles.choiceDetail}>
+						{'Form of '}
+						<span className={styles.choiceLemma} lang={ROMANIZED_LANG}>{form.lemma}</span>
+						{' with '}
+						<span lang={ROMANIZED_LANG}>{form.ending}</span>
+					</span>
+				)}
 				{details.map((detail) => (
 					<span key={detail} className={styles.choiceDetail}>{detail}</span>
 				))}
@@ -450,6 +462,7 @@ function BoxDialog({
 					'The model\'s reading',
 					entry ? `In ${sources(entry)}` : closest.length ? 'Not in the dictionaries' : '',
 				].filter(Boolean),
+				form: entry && closestForm(entry, romanization),
 				current: !correction && settled,
 				action: correction ? 'Go back to it' : 'Mark as right',
 				onPick: () => {
@@ -465,6 +478,7 @@ function BoxDialog({
 					`${word.distance} ${word.distance === 1 ? 'change' : 'changes'} from the reading`,
 					sources(word),
 				],
+				form: closestForm(word, romanization),
 				current: correction?.abkai === word.abkai && !notManchu,
 				action: 'Use this',
 				onPick: () => { onCorrect({ manchu: word.manchu, abkai: word.abkai }); },
