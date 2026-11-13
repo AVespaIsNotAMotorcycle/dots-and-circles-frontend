@@ -22,6 +22,21 @@
 	padding: .25rem .75rem;
 	white-space: nowrap;
 }
+.flagged button + button {
+	margin-left: -.25rem;
+}
+.total {
+	color: grey;
+	font-weight: 400;
+}
+.visuallyHidden {
+	position: absolute;
+	width: 1px;
+	height: 1px;
+	overflow: hidden;
+	clip-path: inset(50%);
+	white-space: nowrap;
+}
 /* As on the flagged boxes and words */
 .badge {
 	display: inline-flex;

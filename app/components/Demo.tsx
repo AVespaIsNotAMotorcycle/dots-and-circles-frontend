@@ -15,6 +15,7 @@ import SaveText from './SaveText';
 import { loadChecks, pageKey, saveChecks } from './savedChecks';
 import UploadForm from './UploadForm';
 import { boxKey, unresolvedFlags } from './corrections';
+import { flaggedBoxes } from './pagecompare';
 import FlaggedWords from './FlaggedWords';
 import type {
 	Confirmed, Correction, Corrections, EditedBox, ErrorResponse, Page, PageBox, SamplePage,
@@ -245,6 +246,13 @@ export default function Demo({ backendAwake = false }: {
 			? unresolvedFlags(result, expected, corrections, confirmed)
 				.map((box) => ({ reading, box }))
 			: []));
+	// Every flagged word on show, settled or not, in order, for Previous
+	const flagged = readings.flatMap(({ result, expected }, reading) => (
+		result
+			? flaggedBoxes(result.boxes, expected)
+				.map((isFlagged, box) => (isFlagged ? { reading, box } : undefined))
+				.filter((word) => word !== undefined)
+			: []));
 	// The last one gone to, so Next goes on from it
 	const [lastChecked, setLastChecked] = useState<{ reading: number; box: number }>();
 	// True while the user is going through them with Next word: settling one
@@ -267,6 +275,20 @@ export default function Demo({ backendAwake = false }: {
 		checking.current = true;
 		setLastChecked(next);
 		openBox(boxId(next.reading, next.box));
+	};
+	// Opens the flagged word before the last one gone to, settled or not,
+	// round to the last, to look again at one just settled. Settling it
+	// again opens the next to check, as from Next word.
+	const previousFlagged = () => {
+		const before = lastChecked
+			? flagged.filter(({ reading, box }) => reading < lastChecked.reading
+				|| (reading === lastChecked.reading && box < lastChecked.box))
+			: [];
+		const previous = before.at(-1) ?? flagged.at(-1);
+		if (!previous) return;
+		checking.current = true;
+		setLastChecked(previous);
+		openBox(boxId(previous.reading, previous.box));
 	};
 	const onBoxClosed = (ruled: boolean) => {
 		if (!checking.current) return;
@@ -375,7 +397,12 @@ export default function Demo({ backendAwake = false }: {
 						</section>
 					)
 			))}
-			<FlaggedWords count={toCheck.length} onNext={() => { nextToCheck(); }} />
+			<FlaggedWords
+				left={toCheck.length}
+				total={flagged.length}
+				onNext={() => { nextToCheck(); }}
+				onPrevious={previousFlagged}
+			/>
 		</section>
 	);
 }
