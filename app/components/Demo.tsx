@@ -341,11 +341,13 @@ export default function Demo({ backendAwake = false }: {
 					onReadAll={readAll}
 					onFileChange={() => { if (readingPdf.current) stop(); }}
 					onError={setError}
-				/>
-				<SamplePageForm
-					disabled={busy}
-					names={pageNames}
-					onLoad={loadPage}
+					beside={(
+						<SamplePageForm
+							disabled={busy}
+							names={pageNames}
+							onLoad={loadPage}
+						/>
+					)}
 				/>
 				<LoadingCard
 					loading={Boolean(loading) || !backendAwake}

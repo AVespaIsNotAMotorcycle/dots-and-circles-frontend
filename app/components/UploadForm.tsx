@@ -40,7 +40,10 @@ export default function UploadForm({
 	onReadAll = () => {},
 	onFileChange = () => {},
 	onError = () => {},
+	beside,
 }: {
+	// Shown on the left of the read buttons' row, such as the sample pages
+	beside?: React.ReactNode;
 	hidden?: boolean;
 	disabled?: boolean;
 	onRead?: (file: File, label: string) => void;
@@ -354,6 +357,8 @@ export default function UploadForm({
 			</details>
 			</div>
 			<div className={styles.submitRow}>
+				{beside}
+				<div className={styles.readButtons}>
 				<button type="submit" disabled={disabled || !upload}>
 					{pdf ? `Read Page ${shownPage}` : 'Read My Page'}
 				</button>
@@ -372,6 +377,7 @@ export default function UploadForm({
 						{`Read All ${pdf.doc.numPages} Pages`}
 					</button>
 				)}
+				</div>
 			</div>
 		</form>
 	);

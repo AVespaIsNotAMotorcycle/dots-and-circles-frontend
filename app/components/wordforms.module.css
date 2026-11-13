@@ -54,12 +54,20 @@
 	flex-direction: column;
 	gap: .25rem;
 }
-/* The buttons, centred below the inputs */
+/* Below the inputs: the sample pages on the left, the read buttons on the
+   right */
 .submitRow {
 	display: flex;
 	flex-wrap: wrap;
-	justify-content: center;
+	align-items: center;
+	justify-content: space-between;
+	gap: .75rem;
+}
+.readButtons {
+	display: flex;
+	flex-wrap: wrap;
 	gap: .5rem;
+	margin-left: auto;
 }
 .options input {
 	/* Undo the global text-input sizing */
@@ -179,6 +187,8 @@
 }
 .sample label {
 	display: flex;
+	/* Not the column the form's other labels are */
+	flex-direction: row;
 	flex-wrap: wrap;
 	align-items: center;
 	gap: .5rem;
