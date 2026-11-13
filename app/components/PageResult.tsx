@@ -188,6 +188,64 @@ function Choice({ manchu, abkai, details, current, action, onPick }: {
 	);
 }
 
+// The size of an image in pixels, once it's loaded, and the image it's
+// for, so a new image's size isn't taken from the last
+type ImageSize = { image: string; w: number; h: number };
+function useImageSize(src: string) {
+	const [size, setSize] = useState<ImageSize>();
+	useEffect(() => {
+		const image = new Image();
+		image.onload = () => {
+			setSize({ image: src, w: image.naturalWidth, h: image.naturalHeight });
+		};
+		image.src = src;
+	}, [src]);
+	return size?.image === src ? size : undefined;
+}
+
+// A box with a margin of the page around it, from the page image, with the
+// box outlined, to see what it takes in and what it leaves out. Its own
+// image until the page's size is known.
+function BoxCrop({ box, page }: {
+	box: PageBox;
+	page?: { image: string; size?: ImageSize };
+}) {
+	if (!page?.size) {
+		return <img className={styles.cropImage} src={box.image} alt="The part of the page in this box" />;
+	}
+	const { size } = page;
+	// A few pixels each side, more for a bigger box
+	const margin = Math.max(6, Math.round(0.2 * Math.min(box.w, box.h)));
+	const left = Math.max(0, box.x - margin);
+	const top = Math.max(0, box.y - margin);
+	const right = Math.min(size.w, box.x + box.w + margin);
+	const bottom = Math.min(size.h, box.y + box.h + margin);
+	return (
+		<svg
+			className={styles.cropImage}
+			width={right - left}
+			height={bottom - top}
+			viewBox={`${left} ${top} ${right - left} ${bottom - top}`}
+			// As tall as there's room for, unless that makes it too wide
+			style={{
+				width: `min(11rem, calc(var(--crop-height) * ${(right - left) / (bottom - top)}))`,
+				aspectRatio: `${right - left} / ${bottom - top}`,
+			}}
+			role="img"
+			aria-label="The part of the page in this box, with a little of the page around it"
+		>
+			<image href={page.image} width={size.w} height={size.h} />
+			<rect
+				className={styles.cropBox}
+				x={box.x}
+				y={box.y}
+				width={box.w}
+				height={box.h}
+			/>
+		</svg>
+	);
+}
+
 // The box's reading as the user would have it, typed in Abkai and shown in
 // Manchu as they type
 function TypeReading({ box, onCorrect }: {
@@ -240,9 +298,11 @@ function TypeReading({ box, onCorrect }: {
 // go back to), the closest dictionary words, or the user's own, typed in.
 // Or it can be marked as not Manchu.
 function BoxDialog({
-	box, flagged, correction, confirmed, onCorrect, onConfirm, onClose,
+	box, page, flagged, correction, confirmed, onCorrect, onConfirm, onClose,
 }: {
 	box: PageBox | undefined;
+	// The page image the box is in, and its size once known
+	page?: { image: string; size?: ImageSize };
 	// Whether it's flagged as a possible misreading
 	flagged: boolean;
 	// Whether the user marked its flagged reading as right, and how to change
@@ -290,7 +350,7 @@ function BoxDialog({
 				{header('Not Manchu')}
 				<div className={styles.dialogBody}>
 					<div className={styles.crop}>
-						<img src={box.image} alt="The part of the page in this box" />
+						<BoxCrop box={box} page={page} />
 					</div>
 					<p>
 						{`The classifier gives it a ${percent(box['manchu-probability'])} chance of being Manchu, so the model didn't read it.`}
@@ -320,7 +380,7 @@ function BoxDialog({
 					? `The model's reading, ${percent(box.confidence)} confident` : undefined)}
 				<div className={styles.dialogBody}>
 					<div className={styles.crop}>
-						<img src={box.image} alt="The part of the page in this box" />
+						<BoxCrop box={box} page={page} />
 						<span className={styles.dialogManchu} aria-hidden="true">
 							{box['prediction-manchu']}
 						</span>
@@ -452,19 +512,12 @@ function PageImage({ page, statuses, suggests, corrections, boxId, onOpen, editi
 		onCancel: () => void;
 	};
 }) {
-	const [size, setSize] = useState<{ image: string; w: number; h: number }>();
+	const size = useImageSize(page.image);
 	const svg = useRef<SVGSVGElement>(null);
 	const scale = useImageScale(svg, size?.w);
-	useEffect(() => {
-		const image = new Image();
-		image.onload = () => {
-			setSize({ image: page.image, w: image.naturalWidth, h: image.naturalHeight });
-		};
-		image.src = page.image;
-	}, [page.image]);
 
 	// Until the new page's size is known
-	if (size?.image !== page.image) {
+	if (!size) {
 		return <div className={styles.pagePlaceholder} />;
 	}
 	if (editing) {
@@ -638,6 +691,8 @@ export default function PageResult({
 	const [opened, setOpened] = useState<{ page: ReadPage; index: number }>();
 	const open = opened?.page === page ? opened.index : undefined;
 	const openBox = (index: number) => { setOpened({ page, index }); };
+	// For the close-up's margin of the page round a box
+	const pageSize = useImageSize(page.image);
 	// ruled: whether the user made a ruling on the word, rather than just
 	// closing it
 	const closeBox = (ruled = false) => {
@@ -726,6 +781,7 @@ export default function PageResult({
 			</div>
 			<BoxDialog
 				box={open !== undefined ? page.boxes[open] : undefined}
+				page={{ image: page.image, size: pageSize }}
 				flagged={open !== undefined && flaggedBox[open]}
 				correction={open !== undefined ? corrections[boxKey(page.boxes[open])] : undefined}
 				confirmed={open !== undefined && Boolean(confirmed[boxKey(page.boxes[open])])}

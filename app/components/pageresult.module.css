@@ -163,13 +163,26 @@
 	gap: .5rem;
 	flex: none;
 	align-items: flex-start;
+	/* The most room for the box's picture: box images are small, so scaled
+	   up to read */
+	--crop-height: min(45svh, 18rem);
 }
-.crop img {
-	/* Box images are small, so scale them up to read */
-	height: min(45svh, 18rem);
-	max-width: 9rem;
+/* The box's own image, until the page's size is known to show it in */
+img.cropImage {
+	height: var(--crop-height);
+	max-width: 11rem;
 	object-fit: contain;
 	object-position: top;
+}
+svg.cropImage {
+	height: auto;
+}
+/* The box itself, within the margin around it */
+.cropBox {
+	fill: none;
+	stroke: #1e6fd9;
+	stroke-width: 2px;
+	vector-effect: non-scaling-stroke;
 }
 .dialogManchu {
 	font-family: manchu0;
@@ -205,8 +218,8 @@
 		flex-direction: column;
 		align-items: stretch;
 	}
-	.crop img {
-		height: 10rem;
+	.crop {
+		--crop-height: 10rem;
 	}
 	.dialogManchu {
 		max-height: 10rem;
