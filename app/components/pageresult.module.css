@@ -330,3 +330,44 @@
 	writing-mode: vertical-lr;
 	max-height: 8rem;
 }
+
+/* The page's text: a block per line (a column, in the vertical Manchu) */
+.textLine {
+	display: block;
+}
+/* A word read from a box, which opens it close up */
+.textWord {
+	cursor: pointer;
+	border-radius: 3px;
+	outline: none;
+}
+.textWord:hover, .textWord:focus-visible {
+	background: rgba(30, 111, 217, .15);
+}
+.textWord:focus-visible {
+	box-shadow: 0 0 0 2px #1e6fd9;
+}
+.correctedWord {
+	color: #0d9488;
+}
+/* The same marks as on the boxes, kept upright in the vertical Manchu */
+.wordBadge {
+	display: inline-block;
+	writing-mode: horizontal-tb;
+	width: 1.25rem;
+	height: 1.25rem;
+	margin-inline-start: .2em;
+	border: 1.5px solid white;
+	border-radius: 50%;
+	background: #111;
+	color: white;
+	font-family: Arial, Helvetica, sans-serif;
+	font-size: .75rem;
+	font-weight: 800;
+	line-height: calc(1.25rem - 3px);
+	text-align: center;
+	vertical-align: super;
+}
+.correctedWordBadge {
+	background: #0d9488;
+}

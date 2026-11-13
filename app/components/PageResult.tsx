@@ -2,7 +2,8 @@ import { useEffect, useRef, useState } from 'react';
 
 import BoxEditor from './BoxEditor';
 import type { BoxStatus } from './BoxEditor';
-import { boxKey, correctedText } from './corrections';
+import { boxKey, textLines } from './corrections';
+import type { TextWord } from './corrections';
 import { alignWords, boxStatuses, pageWords, wordLetters, wordsRight } from './pagecompare';
 import { abkaiToManchu, standardAbkai } from './romanization';
 import type {
@@ -338,28 +339,25 @@ function BoxDialog({ box, suggests, correction, onCorrect, onClose }: {
 // The page with its boxes drawn over it, in the page image's own pixels,
 // each Manchu box coloured by how it compares with the expected Abkai. While
 // editing, the boxes can be changed and sent with onSubmit to be read again.
-function PageImage({ page, expected, corrections, onCorrect, editing }: {
+function PageImage({ page, statuses, suggests, corrections, onOpen, editing }: {
 	page: Page;
-	expected: string;
-	// The user's words for boxes, and how to change one (undefined goes back
-	// to the model's), after which the box's dialog closes
+	// How each of page.boxes compares with the expected text, and whether
+	// its closest dictionary words are worth a look
+	statuses: ('right' | 'wrong' | undefined)[];
+	suggests: boolean[];
+	// The user's words for boxes
 	corrections: Corrections;
-	onCorrect?: (box: PageBox, correction?: Correction) => void;
+	// Shows box index close up
+	onOpen: (index: number) => void;
 	editing?: {
 		busy: boolean;
 		onSubmit: (boxes: EditedBox[]) => void;
 		onCancel: () => void;
 	};
 }) {
-	const statuses = boxStatuses(page.boxes, expected);
-	const compared = pageWords(expected).length > 0;
 	const [size, setSize] = useState<{ image: string; w: number; h: number }>();
-	// The index of the box shown close up
-	const [open, setOpen] = useState<number>();
 	const svg = useRef<SVGSVGElement>(null);
 	const scale = useImageScale(svg, size?.w);
-	const suggests = (index: number) => (
-		suggestsWords(page.boxes[index], statuses[index], compared));
 	useEffect(() => {
 		const image = new Image();
 		image.onload = () => {
@@ -405,25 +403,72 @@ function PageImage({ page, expected, corrections, onCorrect, editing }: {
 						key={key}
 						box={box}
 						status={statuses[key]}
-						suggests={suggests(key)}
+						suggests={suggests[key]}
 						correction={box.kind === 'manchu' ? corrections[boxKey(box)] : undefined}
 						badge={BADGE * scale}
-						onOpen={() => { setOpen(key); }}
+						onOpen={() => { onOpen(key); }}
 					/>
 				))}
 			</svg>
-			<BoxDialog
-				box={open !== undefined ? page.boxes[open] : undefined}
-				suggests={open !== undefined && suggests(open)}
-				correction={open !== undefined ? corrections[boxKey(page.boxes[open])] : undefined}
-				onCorrect={(correction) => {
-					if (open === undefined || !onCorrect) return;
-					onCorrect(page.boxes[open], correction);
-					setOpen(undefined);
-				}}
-				onClose={() => { setOpen(undefined); }}
-			/>
 		</>
+	);
+}
+
+// A line per column of the page's text, in Manchu or Abkai, with the user's
+// corrections in place. Each word read from a box opens that box close up,
+// as clicking the box does, and is marked as the box is: a ? if its closest
+// dictionary words are worth a look, or a ✎ in teal if corrected.
+function PageText({ lines, suggests, corrected, script, onOpen }: {
+	lines: TextWord[][];
+	suggests: boolean[];
+	// Whether each of the page's boxes was corrected
+	corrected: boolean[];
+	script: 'manchu' | 'abkai';
+	onOpen: (index: number) => void;
+}) {
+	return (
+		<p className={script === 'manchu' ? styles.manchu : styles.abkai}>
+			{lines.map((line, number) => (
+				<span key={number} className={styles.textLine}>
+					{line.map(({ word, box }, key) => {
+						const separator = key > 0 ? ' ' : '';
+						if (box === undefined) return `${separator}${word}`;
+						// A box's words share its mark, on the last of them
+						const last = line[key + 1]?.box !== box;
+						const mark = corrected[box] ? '✎' : suggests[box] ? '?' : undefined;
+						return (
+							<span key={key}>
+								{separator}
+								<span
+									className={[styles.textWord,
+										corrected[box] && styles.correctedWord].filter(Boolean).join(' ')}
+									role="button"
+									tabIndex={0}
+									aria-label={`${word}${mark === '✎' ? ', corrected' : mark ? ', with close dictionary words' : ''}. Show its box closer.`}
+									onClick={() => { onOpen(box); }}
+									onKeyDown={(event) => {
+										if (event.key !== 'Enter' && event.key !== ' ') return;
+										event.preventDefault();
+										onOpen(box);
+									}}
+								>
+									{word}
+									{last && mark && (
+										<span
+											className={[styles.wordBadge,
+												mark === '✎' && styles.correctedWordBadge].filter(Boolean).join(' ')}
+											aria-hidden="true"
+										>
+											{mark}
+										</span>
+									)}
+								</span>
+							</span>
+						);
+					})}
+				</span>
+			))}
+		</p>
 	);
 }
 
@@ -467,14 +512,20 @@ export default function PageResult({
 	const found = page.boxes.some(({ kind }) => kind === 'manchu');
 	// Whether there's any text to compare the reading with
 	const compared = pageWords(expected).length > 0;
-	// Whether any box has a badge for its closest dictionary words
-	const statuses = compared ? boxStatuses(page.boxes, expected) : [];
-	const flagged = page.boxes.some((box, index) => (
+	const statuses = boxStatuses(page.boxes, expected);
+	// Which boxes have a badge for their closest dictionary words, and which
+	// the user corrected
+	const suggests = page.boxes.map((box, index) => (
 		suggestsWords(box, statuses[index], compared)));
-	// The page's text with the user's words in place of the model's
-	const text = correctedText(page, corrections);
-	const corrected = page.boxes.filter((box) => (
-		box.kind === 'manchu' && corrections[boxKey(box)])).length;
+	const flagged = suggests.some(Boolean);
+	const isCorrected = page.boxes.map((box) => (
+		box.kind === 'manchu' && Boolean(corrections[boxKey(box)])));
+	const corrected = isCorrected.filter(Boolean).length;
+	// The box shown close up, from the page or its text, for this page only
+	const [opened, setOpened] = useState<{ page: ReadPage; index: number }>();
+	const open = opened?.page === page ? opened.index : undefined;
+	const openBox = (index: number) => { setOpened({ page, index }); };
+	const closeBox = () => { setOpened(undefined); };
 
 	return (
 		<section className={styles.page} id={id}>
@@ -483,9 +534,10 @@ export default function PageResult({
 			<figure className={styles.marked}>
 				<PageImage
 					page={page}
-					expected={expected}
+					statuses={statuses}
+					suggests={suggests}
 					corrections={corrections}
-					onCorrect={onCorrect}
+					onOpen={openBox}
 					editing={editing ? {
 						busy: rereading,
 						onSubmit: reread,
@@ -523,13 +575,26 @@ export default function PageResult({
 				<div className={styles.texts}>
 					<section>
 						<h4>Manchu</h4>
-						<p className={styles.manchu}>{text.manchu}</p>
+						<PageText
+							lines={textLines(page, corrections, 'manchu')}
+							suggests={suggests}
+							corrected={isCorrected}
+							script="manchu"
+							onOpen={openBox}
+						/>
 					</section>
 					<section>
 						<h4>Abkai</h4>
-						<p className={styles.abkai}>{text.abkai}</p>
+						<PageText
+							lines={textLines(page, corrections, 'abkai')}
+							suggests={suggests}
+							corrected={isCorrected}
+							script="abkai"
+							onOpen={openBox}
+						/>
 						<p className={styles.hint}>
 							A line per column. □ is a box of other text, such as Chinese.
+							Click a word to see its box closer.
 							{corrected > 0 && ` With your ${corrected} ${corrected === 1 ? 'correction' : 'corrections'}.`}
 						</p>
 					</section>
@@ -538,6 +603,17 @@ export default function PageResult({
 				<p>No Manchu was found on this page.</p>
 			)}
 			</div>
+			<BoxDialog
+				box={open !== undefined ? page.boxes[open] : undefined}
+				suggests={open !== undefined && suggests[open]}
+				correction={open !== undefined ? corrections[boxKey(page.boxes[open])] : undefined}
+				onCorrect={(correction) => {
+					if (open === undefined || !onCorrect) return;
+					onCorrect(page.boxes[open], correction);
+					closeBox();
+				}}
+				onClose={closeBox}
+			/>
 			{expected && (
 				<Comparison
 					abkai={page.abkai}
