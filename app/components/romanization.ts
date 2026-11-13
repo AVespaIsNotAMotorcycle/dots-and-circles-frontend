@@ -18,6 +18,8 @@ const SHARED: Record<string, string> = {
 	"ᡴ": "k", "ᠮ": "m", "ᠯ": "l", "ᠰ": "s", "ᡨ": "t", "ᡩ": "d", "ᠳ": "d",
 	"ᠵ": "j", "ᠶ": "y", "ᠸ": "w", "ᡵ": "r", "ᡶ": "f", " ": " ",
 	"᠋": "", "᠌": "", "᠍": "", "᠏": "", "᠇": "", "᠊": "",
+	// The Manchu comma and full stop
+	"᠈": ",", "᠉": ".",
 };
 
 // Abkai marks the loanword letters with ‘ (U+2018) after k, g and h, and ʻ
@@ -98,3 +100,49 @@ export function romanize(manchu: string, romanization: Romanization): string {
 // Marks with no visible shape of their own: the ones spelled as nothing
 export const INVISIBLE = new Set(Object.keys(SHARED)
 	.filter((letter) => SHARED[letter] === ''));
+
+// Typed Abkai -> Manchu, as the backend's abkai_to_manchu (ocr/photos.py)
+// has it: each spelling's first letter in the table (so i is ᡳ, not ᠢ, and
+// q is ᠴ, not ᡱ), the whole syllables, and the comma and full stop. Every
+// mark is read as ʻ, since people type them in many ways.
+const TYPED_MARKS = /['’‘ʻ]/g;
+const ABKAI_TO_MANCHU: Record<string, string> = (() => {
+	const table: Record<string, string> = {};
+	for (const [letter, spelling] of Object.entries(LETTERS.abkai)) {
+		const typed = spelling.replace(TYPED_MARKS, ABKAI_MARK);
+		if (typed && !(typed in table)) table[typed] = letter;
+	}
+	for (const [syllable, spellings] of Object.entries(PAIRS.abkai)) {
+		table[spellings.join('').replace(TYPED_MARKS, ABKAI_MARK)] = syllable;
+	}
+	return table;
+})();
+const LONGEST_SPELLING = Math.max(...Object.keys(ABKAI_TO_MANCHU).map((s) => s.length));
+
+// Words typed in Abkai, in Manchu script, reading the longest spelling it
+// can at each step (so ng is ᠩ), e.g. aqambi -> ᠠᠴᠠᠮᠪᡳ. Any of ' ’ ‘ ʻ
+// marks a loanword letter. Undefined if a letter has no Manchu.
+export function abkaiToManchu(text: string): string | undefined {
+	const typed = text.trim().toLowerCase().replace(/\s+/g, ' ')
+		.replace(TYPED_MARKS, ABKAI_MARK);
+	let manchu = '';
+	let position = 0;
+	while (position < typed.length) {
+		let length = LONGEST_SPELLING;
+		while (length > 0 && !(typed.slice(position, position + length) in ABKAI_TO_MANCHU)) {
+			length--;
+		}
+		if (!length) return undefined;
+		manchu += ABKAI_TO_MANCHU[typed.slice(position, position + length)];
+		position += length;
+	}
+	return manchu;
+}
+
+// Typed Abkai in the standard form, with ‘ after k, g and h and ʻ
+// elsewhere, as the server writes it, e.g. k'a -> k‘a
+export const standardAbkai = (text: string) => {
+	const manchu = abkaiToManchu(text);
+	return manchu === undefined ? undefined
+		: manchu.split(' ').map((word) => romanize(word, 'abkai')).join(' ');
+};

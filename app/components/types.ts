@@ -36,6 +36,16 @@ export type LexigraphPage = {
 // The body of a failed request
 export type ErrorResponse = { error: string };
 
+// A dictionary entry close to a box's reading
+export type ClosestWord = {
+	manchu: string;
+	abkai: string;
+	// The edit distance from the reading, ignoring its punctuation
+	distance: number;
+	// The dictionaries listing it: Wiktionary and Norman's
+	sources: ('kaikki' | 'norman')[];
+};
+
 // One box found on a page by POST /upload/multiple
 export type PageBox = {
 	// Where it is in the page's (deskewed) image, in pixels
@@ -59,6 +69,10 @@ export type PageBox = {
 	// True for Manchu read with too little confidence to be in the page's
 	// text, null for other boxes
 	'low-confidence': boolean | null;
+	// The two dictionary entries closest to the reading, closest first. []
+	// for a box read as nothing, and null for other boxes, or every box if
+	// the server has no dictionary.
+	'closest-words': ClosestWord[] | null;
 };
 
 // A page read by one model: POST /upload/multiple
@@ -106,3 +120,9 @@ export type EditedBox = {
 	'prediction-manchu'?: string;
 	confidence?: number;
 };
+
+// The user's own reading of a Manchu box, in place of the model's: picked
+// from its closest dictionary words or typed in Abkai
+export type Correction = { manchu: string; abkai: string };
+// A page's corrections, by boxKey
+export type Corrections = Record<string, Correction>;

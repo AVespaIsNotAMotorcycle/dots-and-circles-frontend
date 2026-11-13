@@ -2,8 +2,13 @@ import { useEffect, useRef, useState } from 'react';
 
 import BoxEditor from './BoxEditor';
 import type { BoxStatus } from './BoxEditor';
+import { boxKey, correctedText } from './corrections';
 import { alignWords, boxStatuses, pageWords, wordLetters, wordsRight } from './pagecompare';
-import type { EditedBox, Page, PageBox, SamplePage } from './types';
+import { abkaiToManchu, standardAbkai } from './romanization';
+import type {
+	ClosestWord, Correction, Corrections, EditedBox, Page, PageBox, SamplePage,
+} from './types';
+import useImageScale from './useImageScale';
 import styles from './pageresult.module.css';
 
 // How the page was turned to straighten it, or undefined if it barely was
@@ -23,9 +28,12 @@ const percent = (value: number) => value
 // The Abkai expected, if any, compared letter by letter with the page's
 // reading. Words are lined up first, then the letters within them. A random
 // page has its transcription and the server's score.
-function Comparison({ abkai, expected, transcription, score }: {
+function Comparison({ abkai, expected, transcription, score, corrected }: {
 	abkai: string;
 	expected: string;
+	// Whether the user has corrected any of the page's readings, which this
+	// leaves out: it scores the model
+	corrected: boolean;
 	// Whether expected is a sample page's transcription
 	transcription: boolean;
 	score?: SamplePage['score'];
@@ -42,6 +50,7 @@ function Comparison({ abkai, expected, transcription, score }: {
 					: `${right} of ${total} words right. `}
 				Red letters are wrong, letters with a wavy line are extra, and faint
 				letters are missing.
+				{corrected && ' This compares the model\'s reading, not your corrections.'}
 			</p>
 			<p className={styles.diff}>
 				{aligned.map((word, key) => (
@@ -56,21 +65,46 @@ function Comparison({ abkai, expected, transcription, score }: {
 	);
 }
 
+// A badge's radius, in screen pixels
+const BADGE = 7;
+
+const SOURCES: Record<ClosestWord['sources'][number], string> = {
+	kaikki: 'Wiktionary',
+	norman: 'Norman\'s dictionary',
+};
+
+// Whether a box's closest dictionary words are worth a look: with text to
+// compare with, when it was read wrong, and without, when its reading isn't
+// a dictionary word
+function suggestsWords(box: PageBox, status: 'right' | 'wrong' | undefined,
+	compared: boolean) {
+	const closest = box['closest-words'];
+	if (box.kind !== 'manchu' || !closest?.length) return false;
+	return compared ? status === 'wrong' : closest[0].distance > 0;
+}
+
 // One box on the page. Manchu has its Abkai reading written down it, and is
 // green if read right, red if read wrong, blue with nothing to compare it
 // with, and yellow if read with too little confidence to be in the text.
-// Other text is grey. Clicking it (or Enter or Space) calls onOpen.
-function BoxOutline({ box, status, onOpen }: {
+// Other text is grey. A box whose closest dictionary words are worth a look
+// has a badge on its corner. One the user corrected shows their word in
+// teal, with a pencil badge. Clicking it (or Enter or Space) calls onOpen.
+function BoxOutline({ box, status, suggests, correction, badge, onOpen }: {
 	box: PageBox;
+	correction?: Correction;
 	// How its reading compares with the expected text, if it does
 	status?: 'right' | 'wrong';
+	// Whether it has the badge, and its radius in the image's pixels
+	suggests: boolean;
+	badge: number;
 	onOpen: () => void;
 }) {
 	const manchu = box.kind === 'manchu';
 	const unsure = manchu && Boolean(box['low-confidence']);
 	const verdict = status === 'right' ? ', read right'
 		: status === 'wrong' ? ', read wrong' : '';
-	const reading = box['prediction-abkai'] ?? '';
+	const read = box['prediction-abkai'] ?? '';
+	const reading = correction?.abkai ?? read;
 	// Written top to bottom, as wide as the box allows, but no longer than it
 	const fontSize = Math.min(box.w * 0.6,
 		(box.h * 0.9) / Math.max(reading.length * 0.6, 1));
@@ -78,11 +112,12 @@ function BoxOutline({ box, status, onOpen }: {
 		<g
 			className={[manchu ? styles.manchuBox : styles.otherBox,
 				manchu && !unsure && styles[status ?? 'unchecked'],
-				unsure && styles.lowConfidence].filter(Boolean).join(' ')}
+				unsure && styles.lowConfidence,
+				correction && styles.corrected].filter(Boolean).join(' ')}
 			role="button"
 			tabIndex={0}
 			aria-label={manchu
-				? `Manchu word read as ${reading}${unsure ? ', with low confidence' : verdict}`
+				? `Manchu word read as ${read}${unsure ? ', with low confidence' : verdict}${correction ? `, corrected to ${correction.abkai}` : suggests ? ', with close dictionary words' : ''}`
 				: 'Other text'}
 			onClick={onOpen}
 			onKeyDown={(event) => {
@@ -101,18 +136,143 @@ function BoxOutline({ box, status, onOpen }: {
 					{reading}
 				</text>
 			)}
+			{(suggests || correction) && (
+				<g className={[styles.badge, correction && styles.correctedBadge]
+					.filter(Boolean).join(' ')}>
+					<circle cx={box.x + box.w} cy={box.y} r={badge} />
+					<text x={box.x + box.w} y={box.y} fontSize={badge * 1.5}>
+						{correction ? '✎' : '?'}
+					</text>
+				</g>
+			)}
 		</g>
 	);
 }
 
-// The part of the page in a box, with the model's reading of it
-function BoxDialog({ box, onClose }: {
+// The dictionary entries closest to a box's reading
+function ClosestWords({ words, suggests, current, onUse }: {
+	words: ClosestWord[];
+	// Whether the box has a badge for them
+	suggests: boolean;
+	// The box's reading as it stands, the user's if they corrected it
+	current: string;
+	onUse: (word: ClosestWord) => void;
+}) {
+	return (
+		<section className={styles.closest}>
+			<h4>{suggests ? 'Did you mean?' : 'Closest dictionary words'}</h4>
+			<ol>
+				{words.map((word, key) => (
+					<li key={key}>
+						<span className={styles.closestManchu}>{word.manchu}</span>
+						<span className={styles.closestText}>
+							<span className={styles.abkai}>{word.abkai}</span>
+							<span className={styles.hint}>
+								{word.distance === 0 ? 'Same as the reading'
+									: `${word.distance} ${word.distance === 1 ? 'change' : 'changes'} from the reading`}
+							</span>
+							<span className={styles.hint}>
+								{word.sources.map((source) => SOURCES[source] ?? source).join(', ')}
+							</span>
+							{word.abkai !== current && (
+								<button
+									type="button"
+									className={styles.useButton}
+									onClick={() => { onUse(word); }}
+								>
+									{`Use ${word.abkai}`}
+								</button>
+							)}
+						</span>
+					</li>
+				))}
+			</ol>
+		</section>
+	);
+}
+
+// A box's reading as the user would have it, typed in Abkai, shown in
+// Manchu as they type. Their word replaces the model's with onCorrect, and
+// onCorrect(undefined) goes back to the model's.
+function CorrectReading({ box, correction, onCorrect }: {
+	box: PageBox;
+	correction?: Correction;
+	onCorrect: (correction?: Correction) => void;
+}) {
+	const [typed, setTyped] = useState('');
+	const manchu = typed.trim() ? abkaiToManchu(typed) : undefined;
+	const id = `correct-${boxKey(box)}`;
+
+	return (
+		<section className={styles.correct}>
+			<h4>Your reading</h4>
+			{correction && (
+				<p className={styles.correctedNote}>
+					{'Corrected to '}
+					<strong>{correction.abkai}</strong>
+					{'. '}
+					<button type="button" onClick={() => { onCorrect(undefined); }}>
+						Undo correction
+					</button>
+				</p>
+			)}
+			<form
+				className={styles.correctForm}
+				onSubmit={(event) => {
+					event.preventDefault();
+					if (!manchu) return;
+					const abkai = standardAbkai(typed) ?? typed.trim();
+					// The model's own reading is no correction
+					onCorrect(abkai === box['prediction-abkai'] ? undefined : { manchu, abkai });
+				}}
+			>
+				<label htmlFor={id}>
+					{correction ? 'Or type another, in Abkai:' : 'Type the word as it should be read, in Abkai:'}
+				</label>
+				<div className={styles.correctRow}>
+					<input
+						id={id}
+						type="text"
+						autoComplete="off"
+						autoCapitalize="off"
+						spellCheck={false}
+						value={typed}
+						aria-invalid={Boolean(typed.trim() && !manchu)}
+						aria-describedby={`${id}-hint`}
+						onChange={(event) => { setTyped(event.target.value); }}
+					/>
+					<button type="submit" disabled={!manchu}>Use</button>
+					{manchu && <span className={styles.correctManchu} aria-hidden="true">{manchu}</span>}
+				</div>
+				<span id={`${id}-hint`} className={typed.trim() && !manchu ? styles.error : styles.hint}>
+					{typed.trim() && !manchu
+						? 'That has a letter Abkai doesn\'t use.'
+						: 'Use \' (or ‘) for the loanword marks, as in k\'.'}
+				</span>
+			</form>
+		</section>
+	);
+}
+
+// The part of the page in a box, with the model's reading of it, the
+// dictionary words closest to it, and a way to correct it
+function BoxDialog({ box, suggests, correction, onCorrect, onClose }: {
 	box: PageBox | undefined;
+	// Whether the box has a badge for its closest words
+	suggests: boolean;
+	// The user's word for it, if they corrected it, and how to change that
+	correction?: Correction;
+	onCorrect: (correction?: Correction) => void;
 	onClose: () => void;
 }) {
 	const dialog = useRef<HTMLDialogElement>(null);
+	const close = useRef<HTMLButtonElement>(null);
 	useEffect(() => {
-		if (box && !dialog.current?.open) dialog.current?.showModal();
+		if (box && !dialog.current?.open) {
+			dialog.current?.showModal();
+			// Rather than the first suggestion, so Enter doesn't pick it
+			close.current?.focus();
+		}
 		if (!box && dialog.current?.open) dialog.current?.close();
 	}, [box]);
 	const manchu = box?.kind === 'manchu';
@@ -147,6 +307,17 @@ function BoxDialog({ box, onClose }: {
 										text.
 									</p>
 								)}
+								{box['closest-words']?.length ? (
+									<ClosestWords
+										words={box['closest-words']}
+										suggests={suggests && !correction}
+										current={correction?.abkai ?? box['prediction-abkai'] ?? ''}
+										onUse={({ manchu, abkai }) => {
+											onCorrect(abkai === box['prediction-abkai'] ? undefined : { manchu, abkai });
+										}}
+									/>
+								) : null}
+								<CorrectReading key={boxKey(box)} box={box} correction={correction} onCorrect={onCorrect} />
 							</>
 						) : (
 							<>
@@ -156,7 +327,7 @@ function BoxDialog({ box, onClose }: {
 								</p>
 							</>
 						)}
-						<button type="button" onClick={onClose}>Close</button>
+						<button ref={close} type="button" onClick={onClose}>Close</button>
 					</div>
 				</div>
 			)}
@@ -167,9 +338,13 @@ function BoxDialog({ box, onClose }: {
 // The page with its boxes drawn over it, in the page image's own pixels,
 // each Manchu box coloured by how it compares with the expected Abkai. While
 // editing, the boxes can be changed and sent with onSubmit to be read again.
-function PageImage({ page, expected, editing }: {
+function PageImage({ page, expected, corrections, onCorrect, editing }: {
 	page: Page;
 	expected: string;
+	// The user's words for boxes, and how to change one (undefined goes back
+	// to the model's), after which the box's dialog closes
+	corrections: Corrections;
+	onCorrect?: (box: PageBox, correction?: Correction) => void;
 	editing?: {
 		busy: boolean;
 		onSubmit: (boxes: EditedBox[]) => void;
@@ -177,8 +352,14 @@ function PageImage({ page, expected, editing }: {
 	};
 }) {
 	const statuses = boxStatuses(page.boxes, expected);
+	const compared = pageWords(expected).length > 0;
 	const [size, setSize] = useState<{ image: string; w: number; h: number }>();
-	const [open, setOpen] = useState<PageBox>();
+	// The index of the box shown close up
+	const [open, setOpen] = useState<number>();
+	const svg = useRef<SVGSVGElement>(null);
+	const scale = useImageScale(svg, size?.w);
+	const suggests = (index: number) => (
+		suggestsWords(page.boxes[index], statuses[index], compared));
 	useEffect(() => {
 		const image = new Image();
 		image.onload = () => {
@@ -195,11 +376,22 @@ function PageImage({ page, expected, editing }: {
 		// Coloured as outside the editor, so the boxes read wrong stay marked
 		const editStatuses = page.boxes.map((box, index): BoxStatus => (
 			box['low-confidence'] ? 'lowConfidence' : statuses[index] ?? 'unchecked'));
-		return <BoxEditor page={page} statuses={editStatuses} size={size} {...editing} />;
+		// Labelled with the user's words, as outside the editor
+		const labels = page.boxes.map((box) => corrections[boxKey(box)]?.abkai);
+		return (
+			<BoxEditor
+				page={page}
+				statuses={editStatuses}
+				labels={labels}
+				size={size}
+				{...editing}
+			/>
+		);
 	}
 	return (
 		<>
 			<svg
+				ref={svg}
 				className={styles.pageImage}
 				width={size.w}
 				height={size.h}
@@ -213,11 +405,24 @@ function PageImage({ page, expected, editing }: {
 						key={key}
 						box={box}
 						status={statuses[key]}
-						onOpen={() => { setOpen(box); }}
+						suggests={suggests(key)}
+						correction={box.kind === 'manchu' ? corrections[boxKey(box)] : undefined}
+						badge={BADGE * scale}
+						onOpen={() => { setOpen(key); }}
 					/>
 				))}
 			</svg>
-			<BoxDialog box={open} onClose={() => { setOpen(undefined); }} />
+			<BoxDialog
+				box={open !== undefined ? page.boxes[open] : undefined}
+				suggests={open !== undefined && suggests(open)}
+				correction={open !== undefined ? corrections[boxKey(page.boxes[open])] : undefined}
+				onCorrect={(correction) => {
+					if (open === undefined || !onCorrect) return;
+					onCorrect(page.boxes[open], correction);
+					setOpen(undefined);
+				}}
+				onClose={() => { setOpen(undefined); }}
+			/>
 		</>
 	);
 }
@@ -227,7 +432,7 @@ function PageImage({ page, expected, editing }: {
 // compares with the Abkai expected (the user's, or a sample page's
 // transcription)
 export default function PageResult({
-	page, expected = '', title = 'Page', id, onReread,
+	page, expected = '', title = 'Page', id, onReread, corrections = {}, onCorrect,
 }: {
 	page: ReadPage;
 	expected?: string;
@@ -238,6 +443,10 @@ export default function PageResult({
 	// Reads the page again in edited boxes, rejecting with why it couldn't.
 	// Without it, the boxes can't be edited.
 	onReread?: (boxes: EditedBox[]) => Promise<void>;
+	// The user's words for some of its boxes, by boxKey, and how to change
+	// one's (undefined goes back to the model's)
+	corrections?: Corrections;
+	onCorrect?: (box: PageBox, correction?: Correction) => void;
 }) {
 	const random = 'transcription' in page ? page : undefined;
 	// The page whose boxes are being edited, so a new page ends the editing
@@ -258,6 +467,14 @@ export default function PageResult({
 	const found = page.boxes.some(({ kind }) => kind === 'manchu');
 	// Whether there's any text to compare the reading with
 	const compared = pageWords(expected).length > 0;
+	// Whether any box has a badge for its closest dictionary words
+	const statuses = compared ? boxStatuses(page.boxes, expected) : [];
+	const flagged = page.boxes.some((box, index) => (
+		suggestsWords(box, statuses[index], compared)));
+	// The page's text with the user's words in place of the model's
+	const text = correctedText(page, corrections);
+	const corrected = page.boxes.filter((box) => (
+		box.kind === 'manchu' && corrections[boxKey(box)])).length;
 
 	return (
 		<section className={styles.page} id={id}>
@@ -267,6 +484,8 @@ export default function PageResult({
 				<PageImage
 					page={page}
 					expected={expected}
+					corrections={corrections}
+					onCorrect={onCorrect}
 					editing={editing ? {
 						busy: rereading,
 						onSubmit: reread,
@@ -279,7 +498,7 @@ export default function PageResult({
 				{rereadError && <p className={styles.error} role="alert">{rereadError}</p>}
 				<figcaption>
 					{editing && 'Boxes outlined in purple dashes are read again; the rest keep their reading and colour. '}
-					{!editing && `Read by ${page.model}. Manchu words are labelled with their reading and outlined ${compared ? 'in green if read right or red if read wrong' : 'in blue'}, or in yellow if read with too little confidence to include in the text; other text is outlined in grey. Click a box to see it closer.`}
+					{!editing && `Read by ${page.model}. Manchu words are labelled with their reading and outlined ${compared ? 'in green if read right or red if read wrong' : 'in blue'}, or in yellow if read with too little confidence to include in the text; other text is outlined in grey.${flagged ? ` ${compared ? 'Words read wrong' : 'Readings that aren\'t dictionary words'} have a ? on their corner: click one for the closest dictionary words.` : ''}${corrected ? ' Words you corrected are in teal, with a ✎.' : ''} Click any box to see it closer${onCorrect ? ' or correct its reading' : ''}.`}
 					{angle && ` ${angle}`}
 					{random?.credit && (
 						<span className={styles.credit}>
@@ -304,13 +523,14 @@ export default function PageResult({
 				<div className={styles.texts}>
 					<section>
 						<h4>Manchu</h4>
-						<p className={styles.manchu}>{page.manchu}</p>
+						<p className={styles.manchu}>{text.manchu}</p>
 					</section>
 					<section>
 						<h4>Abkai</h4>
-						<p className={styles.abkai}>{page.abkai}</p>
+						<p className={styles.abkai}>{text.abkai}</p>
 						<p className={styles.hint}>
 							A line per column. □ is a box of other text, such as Chinese.
+							{corrected > 0 && ` With your ${corrected} ${corrected === 1 ? 'correction' : 'corrections'}.`}
 						</p>
 					</section>
 				</div>
@@ -324,6 +544,7 @@ export default function PageResult({
 					expected={expected}
 					transcription={Boolean(random)}
 					score={(random as Partial<SamplePage> | undefined)?.score}
+					corrected={corrected > 0}
 				/>
 			)}
 		</section>

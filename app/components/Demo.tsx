@@ -12,7 +12,10 @@ import type { ReadPage } from './PageResult';
 import PdfSummary from './PdfSummary';
 import SamplePageForm from './SamplePageForm';
 import UploadForm from './UploadForm';
-import type { EditedBox, ErrorResponse, Page, SamplePage } from './types';
+import { boxKey } from './corrections';
+import type {
+	Correction, Corrections, EditedBox, ErrorResponse, Page, PageBox, SamplePage,
+} from './types';
 
 const BACKEND = process.env.NEXT_PUBLIC_BACKEND
 
@@ -24,6 +27,9 @@ type Reading = {
 	result?: ReadPage;
 	expected: string;
 	error?: string;
+	// The user's words for some of its boxes, which outlast reading it again
+	// in edited boxes, as the boxes they're for keep their place
+	corrections?: Corrections;
 };
 
 // The element id of a PDF's page number (from 1), for links to it
@@ -172,6 +178,18 @@ export default function Demo({ backendAwake = false }: {
 			});
 	};
 
+	// Puts the user's word for a box of readings[index]'s page in place of
+	// the model's, or goes back to the model's for undefined
+	const correct = (index: number, box: PageBox, correction?: Correction) => {
+		setReadings((previous) => previous.map((reading, i) => {
+			if (i !== index) return reading;
+			const corrections = { ...reading.corrections };
+			if (correction) corrections[boxKey(box)] = correction;
+			else delete corrections[boxKey(box)];
+			return { ...reading, corrections };
+		}));
+	};
+
 	// Loads the sample page with this name, or any one for ''
 	const loadPage = (name = '') => {
 		request('loadingPage',
@@ -225,7 +243,7 @@ export default function Demo({ backendAwake = false }: {
 			{pdfPages !== undefined && (
 				<PdfSummary readings={readings} pages={pdfPages} pageId={pdfPageId} />
 			)}
-			{readings.map(({ title, result, expected, error: problem }, index) => (
+			{readings.map(({ title, result, expected, error: problem, corrections }, index) => (
 				result
 					? (
 						<PageResult
@@ -235,6 +253,8 @@ export default function Demo({ backendAwake = false }: {
 							title={title}
 							id={pdfPages !== undefined ? pdfPageId(index + 1) : undefined}
 							onReread={(boxes) => reread(index, boxes)}
+							corrections={corrections}
+							onCorrect={(box, correction) => { correct(index, box, correction); }}
 						/>
 					)
 					: (

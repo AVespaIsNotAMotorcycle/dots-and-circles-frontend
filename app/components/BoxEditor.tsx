@@ -1,7 +1,8 @@
-import { useEffect, useRef, useState } from 'react';
+import { useRef, useState } from 'react';
 
 import type { EditedBox, Page } from './types';
 import styles from './boxeditor.module.css';
+import useImageScale from './useImageScale';
 
 // The tallest a box can be drawn or resized to, as a multiple of its width
 export const MAX_ASPECT = 8;
@@ -157,7 +158,8 @@ function Loupe({ image, size, boxes, box, edges, scale }: {
 	);
 }
 
-const fromPage = (page: Page, statuses: BoxStatus[]): Box[] => page.boxes.map((box, index) => ({
+const fromPage = (page: Page, statuses: BoxStatus[], labels: (string | undefined)[]):
+	Box[] => page.boxes.map((box, index) => ({
 	x: box.x,
 	y: box.y,
 	w: box.w,
@@ -166,7 +168,8 @@ const fromPage = (page: Page, statuses: BoxStatus[]): Box[] => page.boxes.map((b
 	reading: box['prediction-manchu'] !== null && box.confidence !== null
 		? {
 			manchu: box['prediction-manchu'],
-			abkai: box['prediction-abkai'],
+			// Shown on it: the user's word, if they corrected it
+			abkai: labels[index] ?? box['prediction-abkai'],
 			confidence: box.confidence,
 		}
 		: undefined,
@@ -215,10 +218,14 @@ type Drag =
 
 // The page's boxes, to delete, move, resize, draw or change the kind of,
 // then send back with onSubmit to be read again
-export default function BoxEditor({ page, statuses, size, busy, onSubmit, onCancel }: {
+export default function BoxEditor({
+	page, statuses, labels, size, busy, onSubmit, onCancel,
+}: {
 	page: Page;
 	// The colour of each of page.boxes, kept while a box keeps its reading
 	statuses: BoxStatus[];
+	// The word to show on each of page.boxes in place of its reading, if any
+	labels: (string | undefined)[];
 	// The page image's size in pixels
 	size: { w: number; h: number };
 	// True while the edited boxes are being read
@@ -226,23 +233,12 @@ export default function BoxEditor({ page, statuses, size, busy, onSubmit, onCanc
 	onSubmit: (boxes: EditedBox[]) => void;
 	onCancel: () => void;
 }) {
-	const [boxes, setBoxes] = useState<Box[]>(() => fromPage(page, statuses));
+	const [boxes, setBoxes] = useState<Box[]>(() => fromPage(page, statuses, labels));
 	const [selected, setSelected] = useState<number>();
 	const [drag, setDrag] = useState<Drag>();
-	// The image's pixels per screen pixel, for handles that stay one size
-	const [scale, setScale] = useState(1);
 	const svg = useRef<SVGSVGElement>(null);
-
-	useEffect(() => {
-		const element = svg.current;
-		if (!element) return;
-		const observer = new ResizeObserver(() => {
-			const width = element.getBoundingClientRect().width;
-			if (width) setScale(size.w / width);
-		});
-		observer.observe(element);
-		return () => { observer.disconnect(); };
-	}, [size.w]);
+	// The image's pixels per screen pixel, for handles that stay one size
+	const scale = useImageScale(svg, size.w);
 
 	// Where a pointer event is, in the image's pixels
 	const point = (event: React.PointerEvent) => {
@@ -399,7 +395,7 @@ export default function BoxEditor({ page, statuses, size, busy, onSubmit, onCanc
 						type="button"
 						disabled={busy}
 						onClick={() => {
-							setBoxes(fromPage(page, statuses));
+							setBoxes(fromPage(page, statuses, labels));
 							setSelected(undefined);
 						}}
 					>
