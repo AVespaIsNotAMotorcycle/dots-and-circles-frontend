@@ -57,6 +57,18 @@ export type ClosestWord = {
 	// it matched verb forms.
 	lemma?: { manchu: string; abkai: string; norman: string } | null;
 	affixes?: string[] | null;
+	// A verb form's wrong affixes, each with those expected and why: against
+	// vowel harmony, or an ending Norman's dictionary gives the verb another
+	// of, or doesn't note it taking. [] if none, null for an entry, and
+	// missing from a server from before it checked them.
+	breaks?: { affix: string; expected: string[]; reason: 'harmony' | 'norman' | 'unmarked' }[] | null;
+};
+
+// A reason to check a Manchu box's reading, with a message for people (its
+// words in Norman's romanization)
+export type Flag = {
+	code: 'low-confidence' | 'not-in-dictionary' | 'vowel-harmony' | 'verb-ending' | string;
+	message: string;
 };
 
 // One box found on a page by POST /upload/multiple
@@ -89,6 +101,9 @@ export type PageBox = {
 	// for a box read as nothing, and null for other boxes, or every box if
 	// the server has no dictionary.
 	'closest-words': ClosestWord[] | null;
+	// Why its reading should be checked: [] for no reason, null for other
+	// boxes, and missing from a server from before it sent them
+	flags?: Flag[] | null;
 };
 
 // A page read by one model: POST /upload/multiple

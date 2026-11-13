@@ -3,7 +3,8 @@ import { useEffect, useId, useRef, useState } from 'react';
 import BoxEditor from './BoxEditor';
 import type { BoxStatus } from './BoxEditor';
 import {
-	NOT_MANCHU, boxKey, boxReading, closestForm, closestReading, correctionReading, textLines,
+	NOT_MANCHU, boxKey, boxReading, closestForm, closestReading, correctionReading, flagReasons,
+	textLines,
 } from './corrections';
 import type { Script, TextWord } from './corrections';
 import {
@@ -77,6 +78,11 @@ function Comparison({ abkai, expected, transcription, score, corrected, inNorman
 	);
 }
 
+// Text with each ending in it (-ha, -bu-ha) kept on one line, so a line
+// doesn't break after a hyphen
+const keepEndings = (text: string) => text.split(/(-[\p{L}'‘’ʻ-]+)/u).map((part, index) => (
+	index % 2 ? <span key={index} className={styles.ending}>{part}</span> : part));
+
 // A badge's radius, in screen pixels
 const BADGE = 7;
 
@@ -130,6 +136,8 @@ function BoxOutline({
 	// Marked by the user as not Manchu, it's drawn as other text
 	const notManchu = Boolean(correction?.notManchu);
 	const reading = notManchu ? '' : correction ? correctionReading(correction, romanization) : read;
+	// Why it's flagged, shown on hovering it
+	const reasons = flagReasons(box, romanization);
 	// Written top to bottom, as wide as the box allows, but no longer than it
 	const fontSize = Math.min(box.w * 0.6,
 		(box.h * 0.9) / Math.max(reading.length * 0.6, 1));
@@ -145,7 +153,7 @@ function BoxOutline({
 			role="button"
 			tabIndex={0}
 			aria-label={manchu
-				? `Manchu word read as ${read}${unsure ? ', with low confidence' : verdict}${notManchu ? ', marked as not Manchu' : correction ? `, corrected to ${reading}` : suggests ? ', with close dictionary words' : ''}`
+				? `Manchu word read as ${read}${unsure ? ', with low confidence' : verdict}${notManchu ? ', marked as not Manchu' : correction ? `, corrected to ${reading}` : suggests ? `, worth checking${reasons.length ? `: ${reasons.join('. ')}` : ''}` : ''}`
 				: 'Other text'}
 			onClick={onOpen}
 			onKeyDown={(event) => {
@@ -154,6 +162,7 @@ function BoxOutline({
 				onOpen();
 			}}
 		>
+			{suggests && !correction && reasons.length > 0 && <title>{reasons.join('. ')}</title>}
 			<rect x={box.x} y={box.y} width={box.w} height={box.h} />
 			{manchu && reading && (
 				<text
@@ -444,6 +453,7 @@ function BoxDialog({
 	} else if (box) {
 		const read = boxReading(box, romanization);
 		const notManchu = Boolean(correction?.notManchu);
+		const reasons = flagReasons(box, romanization);
 		const closest = box['closest-words'] ?? [];
 		const sources = (word: ClosestWord) => word.sources
 			.map((source) => SOURCES[source] ?? source).join(', ');
@@ -523,7 +533,15 @@ function BoxDialog({
 						</span>
 					</div>
 					<div className={styles.dialogMain}>
-						{box['low-confidence'] && (
+						{reasons.length > 0 ? (
+							<div className={[styles.flagNote,
+								box['low-confidence'] && styles.lowConfidenceNote].filter(Boolean).join(' ')}>
+								<p>Worth checking:</p>
+								<ul>
+									{reasons.map((reason) => <li key={reason}>{keepEndings(reason)}</li>)}
+								</ul>
+							</div>
+						) : box['low-confidence'] && (
 							<p className={styles.lowConfidenceNote}>
 								Low confidence, so the model&apos;s reading is left out of the
 								page&apos;s text.
@@ -735,7 +753,7 @@ function PageText({
 									data-box-id={boxId?.(box)}
 									role="button"
 									tabIndex={0}
-									aria-label={`${word}${mark === '✎' ? ', corrected' : mark ? ', with close dictionary words' : ''}. Show its box closer.`}
+									aria-label={`${word}${mark === '✎' ? ', corrected' : mark ? ', worth checking' : ''}. Show its box closer.`}
 									onClick={() => { onOpen(box); }}
 									onKeyDown={(event) => {
 										if (event.key !== 'Enter' && event.key !== ' ') return;
@@ -786,7 +804,7 @@ function Legend({ compared, lowConfidence, other, flagged, corrected }: {
 			: []),
 		...(other ? [{ mark: <span className={`${styles.swatch} ${styles.swatchOther}`} />, label: 'Other text, such as Chinese' }] : []),
 		...(flagged
-			? [{ mark: <span className={styles.legendBadge}>?</span>, label: 'Possible misreading: see close dictionary words' }]
+			? [{ mark: <span className={styles.legendBadge}>?</span>, label: 'Worth checking: see why, and close dictionary words' }]
 			: []),
 		...(corrected
 			? [{ mark: <span className={`${styles.legendBadge} ${styles.legendCorrected}`}>✎</span>, label: 'Your correction' }]

@@ -207,6 +207,23 @@ svg.cropImage {
 	border-left: 4px solid #e6b800;
 	padding-left: .5rem;
 }
+/* Why the reading is worth checking, as the server flags it */
+.flagNote {
+	border-left: 4px solid #111;
+	padding-left: .5rem;
+}
+.flagNote.lowConfidenceNote {
+	border-left-color: #e6b800;
+}
+.flagNote p {
+	margin: 0;
+	font-weight: 700;
+}
+.flagNote ul {
+	margin: .25rem 0 0;
+	padding-left: 1.25rem;
+	list-style: disc;
+}
 .statusNote {
 	border-left: 4px solid #0d9488;
 	padding-left: .5rem;
@@ -294,7 +311,7 @@ button.choice:focus-visible {
 	font-weight: 700;
 }
 /* Its ending, kept on one line, as a line may break after a hyphen */
-.choiceEnding {
+.choiceEnding, .ending {
 	white-space: nowrap;
 }
 .choiceAction, .choiceCurrent {

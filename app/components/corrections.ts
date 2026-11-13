@@ -42,21 +42,61 @@ export function correctionReading(correction: Correction, script: Script) {
 export const closestReading = (word: ClosestWord, romanization: Romanization) => (
 	romanization === 'abkai' ? word.abkai : word.norman ?? romanizeText(word.manchu, 'norman'));
 
+// An affix, as the server gives it in Norman's romanization (-ci, -bu-),
+// in a romanization (-qi in Abkai)
+function affixIn(norman: string, romanization: Romanization) {
+	if (romanization === 'norman') return norman;
+	const [, before, letters, after] = /^(-?)(.*?)(-?)$/.exec(norman) ?? ['', '', norman, ''];
+	const manchu = toManchu(letters, 'norman');
+	return manchu === undefined ? norman : `${before}${romanize(manchu, romanization)}${after}`;
+}
+
 // For a dictionary word that's a form of a verb, the verb and the affixes
 // on its stem as one ending (-bu- and -ha as -bu-ha), in a romanization
-// (the server gives affixes in Norman's)
 export function closestForm(word: ClosestWord, romanization: Romanization) {
 	if (!word.lemma || !word.affixes?.length) return undefined;
-	const affix = (norman: string) => {
-		if (romanization === 'norman') return norman;
-		const [, before, letters, after] = /^(-?)(.*?)(-?)$/.exec(norman) ?? ['', '', norman, ''];
-		const manchu = toManchu(letters, 'norman');
-		return manchu === undefined ? norman : `${before}${romanize(manchu, romanization)}${after}`;
-	};
 	return {
 		lemma: word.lemma[romanization],
-		ending: word.affixes.map(affix).join('').replace(/-+/g, '-'),
+		ending: word.affixes.map((affix) => affixIn(affix, romanization)).join('').replace(/-+/g, '-'),
 	};
+}
+
+// Why a box's reading should be checked, from the server's flags, in
+// sentences naming words in a romanization (the server's messages use
+// Norman's). A flag it can't put that way keeps the server's message.
+export function flagReasons(box: PageBox, romanization: Romanization): string[] {
+	const nearest = box['closest-words']?.[0];
+	const verb = nearest?.lemma?.[romanization];
+	const affix = (norman: string) => affixIn(norman, romanization);
+	const expected = (affixes: string[]) => affixes.map(affix).join(' or ');
+	const reasons: string[] = [];
+	let endings = false;
+	for (const { code, message } of box.flags ?? []) {
+		if (code === 'low-confidence' && box.confidence !== null) {
+			reasons.push(`Read with low confidence (${Math.round(box.confidence * 100)}%), so it's left out of the page's text`);
+		} else if (code === 'not-in-dictionary' && nearest) {
+			reasons.push(`Not in the dictionaries. The closest is ${closestReading(nearest, romanization)}${verb ? `, a form of ${verb}` : ''}, ${nearest.distance} ${nearest.distance === 1 ? 'change' : 'changes'} away`);
+		} else if (code === 'vowel-harmony' && verb && nearest?.breaks) {
+			reasons.push(`Breaks vowel harmony as a form of ${verb}: ${nearest.breaks
+				.filter(({ reason }) => reason === 'harmony')
+				.map((wrong) => `${affix(wrong.affix)} where ${expected(wrong.expected)} is expected`)
+				.join('; ')}`);
+		} else if (code === 'verb-ending' && verb && nearest?.breaks) {
+			// One flag for each such break: all are put the first time
+			if (endings) continue;
+			endings = true;
+			for (const wrong of nearest.breaks) {
+				if (wrong.reason === 'norman') {
+					reasons.push(`${affix(wrong.affix)} on ${verb}, where Norman's dictionary gives ${expected(wrong.expected)}`);
+				} else if (wrong.reason === 'unmarked') {
+					reasons.push(`${affix(wrong.affix)} on ${verb}, which Norman's dictionary doesn't note as taking it; ${expected(wrong.expected)} is expected`);
+				}
+			}
+		} else {
+			reasons.push(message);
+		}
+	}
+	return reasons;
 }
 
 // The page's text in a script, as the server gave it (Norman romanized here

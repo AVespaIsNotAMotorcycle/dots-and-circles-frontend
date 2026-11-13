@@ -157,14 +157,18 @@ export function wordsRight(abkai: string, expected: string) {
 	return { right, total: truth.length };
 }
 
-// Whether a box's closest dictionary words are worth a look, as a possible
-// misreading: with text to compare with, when it was read wrong, and
-// without, when its reading isn't a dictionary word
+// Whether a box is worth a look, as a possible misreading: with text to
+// compare with, when it was read wrong (and has dictionary words to
+// suggest), and without, when the server flags it, for low confidence, a
+// word in no dictionary or a verb's wrong ending. From a server without
+// flags, when its reading isn't a dictionary word.
 export function suggestsWords(box: PageBox, status: 'right' | 'wrong' | undefined,
 	compared: boolean) {
+	if (box.kind !== 'manchu') return false;
 	const closest = box['closest-words'];
-	if (box.kind !== 'manchu' || !closest?.length) return false;
-	return compared ? status === 'wrong' : closest[0].distance > 0;
+	if (compared) return Boolean(closest?.length) && status === 'wrong';
+	if (box.flags) return box.flags.length > 0;
+	return Boolean(closest?.length) && closest![0].distance > 0;
 }
 
 // Which of a page's boxes are flagged as possible misreadings, in order
