@@ -10,6 +10,14 @@ export default function Home() {
 	return (
 		<main className={styles.homepage}>
 			<h1>Dots and Circles</h1>
+			<p className={styles.intro}>
+				Dots and Circles reads printed Manchu. Upload a scan or photo of a page,
+				or a whole PDF, and it finds each word, reads it with a model trained
+				from scratch for Manchu, and gives you the page&apos;s text in Manchu
+				script and in Abkai romanization. Words it may have misread are flagged
+				with the closest entries in Norman&apos;s dictionary and Wiktionary, so
+				you can correct them before saving the text.
+			</p>
 			<aside className={styles.limitations} aria-labelledby="limitations-title">
 				<h2 id="limitations-title">Known limitations</h2>
 				<ul>

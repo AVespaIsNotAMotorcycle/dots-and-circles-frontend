@@ -1,3 +1,11 @@
+/* What the site is, under its title */
+.intro {
+	max-width: 70ch;
+	margin-top: .5rem;
+	font-size: 1.0625rem;
+	line-height: 1.55;
+}
+
 /* A quiet note of what the reader can't do well, above it */
 .limitations {
 	margin: 1rem 0 .5rem;
