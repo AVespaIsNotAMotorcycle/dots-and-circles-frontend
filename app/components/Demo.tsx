@@ -411,7 +411,7 @@ export default function Demo({ backendAwake = false }: {
 
 	return (
 		<section className={styles.demo}>
-			<h2>Read a page</h2>
+			<h2>Read a scan</h2>
 			<div className={styles.form}>
 				<UploadForm
 					disabled={busy}

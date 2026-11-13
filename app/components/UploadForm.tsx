@@ -237,7 +237,7 @@ export default function UploadForm({
 		>
 			<div className={styles.inputs}>
 			<div className={styles.field}>
-			<span id="upload-title">Upload an image of a single page, or a PDF</span>
+			<span id="upload-title">Upload an image of a single page or a multi-page PDF</span>
 			<div
 				role="group"
 				aria-labelledby="upload-title"

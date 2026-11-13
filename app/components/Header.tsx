@@ -11,7 +11,7 @@ import { useRomanization } from './RomanizationContext';
 const GITHUB = 'https://github.com/AVespaIsNotAMotorcycle/dots-and-circles';
 
 const PAGES: [string, string][] = [
-	['/', 'Read a page'],
+	['/', 'Read pages'],
 	['/test-words', 'Test words'],
 	['/about', 'About'],
 ];
