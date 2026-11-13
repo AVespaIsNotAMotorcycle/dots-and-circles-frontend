@@ -450,8 +450,10 @@ button.choice:focus-visible {
 .textLine {
 	display: block;
 }
-/* A word read from a box, which opens it close up */
+/* A word read from a box, which opens it close up. It keeps its mark on
+   its line: Firefox would otherwise break between them */
 .textWord {
+	white-space: nowrap;
 	cursor: pointer;
 	border-radius: 3px;
 	outline: none;
