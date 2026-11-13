@@ -5,7 +5,7 @@ import { useEffect, useRef, useState } from 'react';
 
 import LoadingCard from './LoadingCard';
 import { alignWords, pageWords, wordLetters } from './pagecompare';
-import { romanizeText } from './romanization';
+import { ROMANIZED_LANG, romanizeText } from './romanization';
 import type { Romanization } from './romanization';
 import { useRomanization } from './RomanizationContext';
 import Switch from './Switch';
@@ -58,9 +58,9 @@ function WordCard({ word }: { word: Lexigraph }) {
 			<img src={word.image} alt={`The word ${label}`} />
 			<div className={styles.text}>
 				<span className={styles.caption}>Word</span>
-				<span className={styles.label}>{label}</span>
+				<span className={styles.label} lang={ROMANIZED_LANG}>{label}</span>
 				<span className={styles.caption}>Read as</span>
-				<span className={styles.reading} aria-label={reading || 'nothing'}>
+				<span className={styles.reading} lang={ROMANIZED_LANG} aria-label={reading || 'nothing'}>
 					{aligned.map((part, key) => (
 						<span key={key}>
 							{wordLetters(part).map(({ letter, status }, index) => (

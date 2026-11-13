@@ -3,6 +3,11 @@
 
 export type Romanization = 'abkai' | 'norman';
 
+// The languages of Manchu text, for browsers, screen readers and search
+// engines: in Manchu script, and romanized (Abkai or Norman)
+export const MANCHU_LANG = 'mnc-Mong';
+export const ROMANIZED_LANG = 'mnc-Latn';
+
 export const ROMANIZATION_NAMES: Record<Romanization, string> = {
 	abkai: 'Abkai',
 	norman: 'Norman',

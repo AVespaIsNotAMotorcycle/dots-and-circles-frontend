@@ -2,6 +2,7 @@ import { useRef, useState } from 'react';
 
 import type { EditedBox, Page } from './types';
 import styles from './boxeditor.module.css';
+import { ROMANIZED_LANG } from './romanization';
 import useImageScale from './useImageScale';
 import ZoomFrame from './ZoomFrame';
 
@@ -448,7 +449,12 @@ export default function BoxEditor({
 								onPointerDown={(event) => { startEdit(event, index, MOVE); }}
 							/>
 							{box.kind === 'manchu' && reading && (
-								<text x={box.x + box.w / 2} y={box.y + box.h / 2} fontSize={fontSize}>
+								<text
+									lang={ROMANIZED_LANG}
+									x={box.x + box.w / 2}
+									y={box.y + box.h / 2}
+									fontSize={fontSize}
+								>
 									{reading}
 								</text>
 							)}

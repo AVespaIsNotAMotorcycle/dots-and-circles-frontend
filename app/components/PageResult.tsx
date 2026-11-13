@@ -9,7 +9,9 @@ import type { Script, TextWord } from './corrections';
 import {
 	alignWords, boxStatuses, flaggedBoxes, pageWords, wordLetters, wordsRight,
 } from './pagecompare';
-import { ROMANIZATION_NAMES, abkaiToManchu, romanizeText, standardAbkai } from './romanization';
+import {
+	MANCHU_LANG, ROMANIZATION_NAMES, ROMANIZED_LANG, abkaiToManchu, romanizeText, standardAbkai,
+} from './romanization';
 import { useRomanization } from './RomanizationContext';
 import type {
 	ClosestWord, Confirmed, Correction, Corrections, EditedBox, Page, PageBox, SamplePage,
@@ -62,7 +64,7 @@ function Comparison({ abkai, expected, transcription, score, corrected, inNorman
 				{corrected && ' This compares the model\'s reading, not your corrections.'}
 				{inNorman && ' It compares in Abkai, as the transcription is written.'}
 			</p>
-			<p className={styles.diff}>
+			<p className={styles.diff} lang={ROMANIZED_LANG}>
 				{aligned.map((word, key) => (
 					<span key={key}>
 						{wordLetters(word).map(({ letter, status }, index) => (
@@ -155,6 +157,7 @@ function BoxOutline({
 			<rect x={box.x} y={box.y} width={box.w} height={box.h} />
 			{manchu && reading && (
 				<text
+					lang={ROMANIZED_LANG}
 					x={box.x + box.w / 2}
 					y={box.y + box.h / 2}
 					fontSize={fontSize}
@@ -194,9 +197,9 @@ function Choice({ manchu, reading, details, current, action, onPick, shortcut }:
 }) {
 	const content = (
 		<>
-			<span className={styles.choiceManchu} aria-hidden="true">{manchu}</span>
+			<span className={styles.choiceManchu} lang={MANCHU_LANG} aria-hidden="true">{manchu}</span>
 			<span className={styles.choiceText}>
-				<span className={styles.choiceWord}>{reading}</span>
+				<span className={styles.choiceWord} lang={ROMANIZED_LANG}>{reading}</span>
 				{details.map((detail) => (
 					<span key={detail} className={styles.choiceDetail}>{detail}</span>
 				))}
@@ -332,7 +335,9 @@ function TypeReading({ box, inputRef, onCorrect }: {
 					onChange={(event) => { setTyped(event.target.value); }}
 				/>
 				<button type="submit" disabled={!manchu}>Use</button>
-				{manchu && <span className={styles.typedManchu} aria-hidden="true">{manchu}</span>}
+				{manchu && (
+					<span className={styles.typedManchu} lang={MANCHU_LANG} aria-hidden="true">{manchu}</span>
+				)}
 				{manchu && romanization === 'norman' && (
 					<span className={styles.typedNorman}>{`Norman: ${romanizeText(manchu, 'norman')}`}</span>
 				)}
@@ -386,10 +391,11 @@ function BoxDialog({
 		if (!box && dialog.current?.open) dialog.current?.close();
 	}, [box]);
 
-	const header = (title: string, detail?: string) => (
+	// lang: the title's, if it's a reading
+	const header = (title: string, detail?: string, lang?: string) => (
 		<header className={styles.dialogHeader}>
 			<div>
-				<h4 id={titleId}>{title}</h4>
+				<h4 id={titleId} lang={lang}>{title}</h4>
 				{detail && <p className={styles.hint}>{detail}</p>}
 			</div>
 			<button
@@ -493,11 +499,12 @@ function BoxDialog({
 		content = (
 			<>
 				{header(read || '(nothing read)', box.confidence !== null
-					? `The model's reading, ${percent(box.confidence)} confident` : undefined)}
+					? `The model's reading, ${percent(box.confidence)} confident` : undefined,
+				read ? ROMANIZED_LANG : undefined)}
 				<div className={styles.dialogBody}>
 					<div className={styles.crop}>
 						<BoxCrop box={box} page={page} />
-						<span className={styles.dialogManchu} aria-hidden="true">
+						<span className={styles.dialogManchu} lang={MANCHU_LANG} aria-hidden="true">
 							{box['prediction-manchu']}
 						</span>
 					</div>
@@ -691,7 +698,10 @@ function PageText({
 	onOpen: (index: number) => void;
 }) {
 	return (
-		<p className={script === 'manchu' ? styles.manchu : styles.abkai}>
+		<p
+			className={script === 'manchu' ? styles.manchu : styles.abkai}
+			lang={script === 'manchu' ? MANCHU_LANG : ROMANIZED_LANG}
+		>
 			{lines.map((line, number) => (
 				<span key={number} className={styles.textLine}>
 					{line.map(({ word, box }, key) => {
