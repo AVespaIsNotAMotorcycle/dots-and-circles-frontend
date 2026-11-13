@@ -11,6 +11,7 @@ import PageResult from './PageResult';
 import type { ReadPage } from './PageResult';
 import PdfSummary from './PdfSummary';
 import SamplePageForm from './SamplePageForm';
+import SaveText from './SaveText';
 import UploadForm from './UploadForm';
 import { boxKey, unresolvedFlags } from './corrections';
 import FlaggedWords from './FlaggedWords';
@@ -82,6 +83,9 @@ export default function Demo({ backendAwake = false }: {
 	const [error, setError] = useState<string>();
 	// The sample pages' names, from GET /pages
 	const [pageNames, setPageNames] = useState<string[]>([]);
+	// What a saved .txt of the readings is named after: the upload, the PDF
+	// or the sample page
+	const [saveName, setSaveName] = useState('reading');
 	// Bumped by every new read (or new file), so a PDF being read stops
 	// before its next page
 	const run = useRef(0);
@@ -127,6 +131,7 @@ export default function Demo({ backendAwake = false }: {
 	// The server ignores a label for a page, so the comparison with the
 	// expected Abkai is made here
 	const readPage = (file: File, expected: string) => {
+		setSaveName(file.name.replace(/\.[^.]+$/, '') || 'reading');
 		request('readingPage', () => postPage(file), 'Couldn\'t read the page.',
 			() => expected);
 	};
@@ -141,6 +146,7 @@ export default function Demo({ backendAwake = false }: {
 	) => {
 		const current = ++run.current;
 		readingPdf.current = true;
+		setSaveName('reading');
 		setError(undefined);
 		setReadings([]);
 		setPdfPages(pages);
@@ -152,6 +158,8 @@ export default function Demo({ backendAwake = false }: {
 			try {
 				const file = await render(page);
 				if (current !== run.current) return;
+				// Named "<the PDF>, page <n>.jpg"
+				if (page === 1) setSaveName(file.name.replace(/, page \d+\.\w+$/, ''));
 				const { data } = await inTurn(() => postPage(file));
 				reading = { title, result: data, expected: expected(page) };
 			} catch (error) {
@@ -267,7 +275,10 @@ export default function Demo({ backendAwake = false }: {
 			() => axios.get<SamplePage>(`${BACKEND}/random`,
 				{ params: { source: 'page', ...(name && { name }) } }),
 			'Couldn\'t load a page.',
-			(result) => result.transcription);
+			(result) => {
+				setSaveName(result.name);
+				return result.transcription;
+			});
 	};
 
 	// Without the list of pages, only a random one can be picked
@@ -314,6 +325,7 @@ export default function Demo({ backendAwake = false }: {
 			{pdfPages !== undefined && (
 				<PdfSummary readings={readings} pages={pdfPages} pageId={pdfPageId} />
 			)}
+			<SaveText readings={readings} name={saveName} />
 			{readings.map(({
 				title, result, expected, error: problem, corrections, confirmed,
 			}, index) => (

@@ -75,3 +75,15 @@ export const unresolvedFlags = (page: Page, expected: string,
 			return flagged && !corrections[key] && !confirmed[key] ? index : -1;
 		})
 		.filter((index) => index >= 0));
+
+// The page's text in one script, with the user's corrections in place, a
+// line per column. withOther false leaves out the □ for each box of other
+// text, and any line left empty by that.
+export function pageText(page: Page, corrections: Corrections,
+	script: 'manchu' | 'abkai', withOther: boolean) {
+	return textLines(page, corrections, script)
+		.map((line) => line.map(({ word }) => word)
+			.filter((word) => withOther || word !== '□').join(' '))
+		.filter((line) => withOther || line)
+		.join('\n');
+}
