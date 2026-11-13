@@ -1,7 +1,6 @@
 'use client'
 
 import axios from 'axios';
-import type { AxiosResponse } from 'axios';
 import { useState, useEffect, useRef } from 'react';
 
 import styles from './demo.module.css';
@@ -12,6 +11,7 @@ import type { ReadPage } from './PageResult';
 import PdfSummary from './PdfSummary';
 import SamplePageForm from './SamplePageForm';
 import SaveText from './SaveText';
+import { shrinkForUpload } from './shrink';
 import { loadChecks, pageKey, saveChecks } from './savedChecks';
 import UploadForm from './UploadForm';
 import { boxKey, unresolvedFlags } from './corrections';
@@ -31,6 +31,11 @@ type Reading = {
 	result?: ReadPage;
 	expected: string;
 	error?: string;
+	// The image sent to be read (an upload, perhaps shrunk, or a PDF's page),
+	// which is sent again with the page's angle to read edited boxes, so the
+	// server has the page exactly as it was. A sample page has none: it's
+	// sent by name.
+	sent?: File;
 	// The user's words for some of its boxes, which outlast reading it again
 	// in edited boxes, as the boxes they're for keep their place
 	corrections?: Corrections;
@@ -72,11 +77,18 @@ const errorMessage = (error: unknown, fallback: string) => (
 	axios.isAxiosError<ErrorResponse>(error) && error.response?.data?.error
 ) || fallback;
 
-// Sends an image of a page to be read
-const postPage = (file: File) => {
+// Leaves the boxes' own images out of the server's responses: they're most
+// of a response, and the close-up cuts each box from the page instead
+const NO_CROPS = { crops: 'false' };
+
+// Sends an image of a page to be read, shrunk first if it's big, and gives
+// the image sent with the reading, to send again to read edited boxes
+const postPage = async (file: File) => {
+	const sent = await shrinkForUpload(file);
 	const body = new FormData();
-	body.append('image', file);
-	return axios.post<Page>(`${BACKEND}/upload/multiple`, body);
+	body.append('image', sent);
+	const { data } = await axios.post<Page>(`${BACKEND}/upload/multiple`, body, { params: NO_CROPS });
+	return { data, sent };
 };
 
 // Reads the user's page (or a PDF's pages), or loads a sample one, and
@@ -117,7 +129,7 @@ export default function Demo({ backendAwake = false }: {
 	// then the page, or the server's error (or fallback)
 	const request = <T extends Page,>(
 		loadingMessage: LoadingMessage,
-		send: () => Promise<AxiosResponse<T>>,
+		send: () => Promise<{ data: T; sent?: File }>,
 		fallback: string,
 		expected: (result: T) => string,
 	) => {
@@ -128,9 +140,9 @@ export default function Demo({ backendAwake = false }: {
 		setPdfPages(undefined);
 		setError(undefined);
 		inTurn(send)
-			.then(({ data }) => {
+			.then(({ data, sent }) => {
 				if (current !== run.current) return;
-				setReadings([newReading({ result: data, expected: expected(data) })]);
+				setReadings([newReading({ result: data, expected: expected(data), sent })]);
 			})
 			.catch((error) => {
 				if (current === run.current) setError(errorMessage(error, fallback));
@@ -172,8 +184,8 @@ export default function Demo({ backendAwake = false }: {
 				if (current !== run.current) return;
 				// Named "<the PDF>, page <n>.jpg"
 				if (page === 1) setSaveName(file.name.replace(/, page \d+\.\w+$/, ''));
-				const { data } = await inTurn(() => postPage(file));
-				reading = newReading({ title, result: data, expected: expected(page) });
+				const { data, sent } = await inTurn(() => postPage(file));
+				reading = newReading({ title, result: data, expected: expected(page), sent });
 			} catch (error) {
 				reading = {
 					title, expected: expected(page),
@@ -200,14 +212,33 @@ export default function Demo({ backendAwake = false }: {
 	// keeps its title, expected text, angle and, for a sample page, its
 	// transcription and credit, but not the server's score of the old
 	// reading. Rejects with why it couldn't.
+	// The page goes as it was first sent, with the angle it was turned by, so
+	// the server has it to the pixel: the image sent, or a sample page's name.
+	// (Not the response's image, a JPEG for showing, which reads a little
+	// differently.)
 	const reread = (index: number, boxes: EditedBox[]) => {
 		const current = run.current;
-		const old = readings[index].result!;
-		return inTurn(() => axios.post<Page>(`${BACKEND}/upload/multiple/boxes`,
-			{ image: old.image, boxes }))
+		const { result: old, sent } = readings[index];
+		const url = `${BACKEND}/upload/multiple/boxes`;
+		const send = () => {
+			if (sent) {
+				const body = new FormData();
+				body.append('image', sent);
+				body.append('angle', String(old!.angle));
+				body.append('boxes', JSON.stringify(boxes));
+				return axios.post<Page>(url, body, { params: NO_CROPS });
+			}
+			if (old && 'name' in old) {
+				return axios.post<Page>(url, { name: old.name, angle: old.angle, boxes },
+					{ params: NO_CROPS });
+			}
+			// Nothing else to send it by: the page as shown, taken as it is
+			return axios.post<Page>(url, { image: old!.image, boxes }, { params: NO_CROPS });
+		};
+		return inTurn(send)
 			.then(({ data }) => {
 				if (current !== run.current) return;
-				const result: ReadPage = { ...old, ...data, angle: old.angle };
+				const result: ReadPage = { ...old!, ...data };
 				if ('score' in result) delete (result as Partial<SamplePage>).score;
 				setReadings((previous) => previous.map((reading, i) => (
 					i === index ? { ...reading, result } : reading)));
@@ -306,7 +337,7 @@ export default function Demo({ backendAwake = false }: {
 	const loadPage = (name = '') => {
 		request('loadingPage',
 			() => axios.get<SamplePage>(`${BACKEND}/random`,
-				{ params: { source: 'page', ...(name && { name }) } }),
+				{ params: { source: 'page', ...NO_CROPS, ...(name && { name }) } }),
 			'Couldn\'t load a page.',
 			(result) => {
 				setSaveName(result.name);

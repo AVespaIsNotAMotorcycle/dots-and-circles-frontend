@@ -59,8 +59,9 @@ export type PageBox = {
 	y: number;
 	w: number;
 	h: number;
-	// The part of the page inside the box, as a PNG data: URL
-	image: string;
+	// The part of the page inside the box, as a PNG data: URL, or null when
+	// asked for without them (?crops=false), as the frontend does
+	image: string | null;
 	// Its line of the page's text, or null if its column has no Manchu
 	line: number | null;
 	// Its place in its column, counting from the top

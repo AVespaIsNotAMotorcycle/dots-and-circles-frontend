@@ -251,7 +251,11 @@ function BoxCrop({ box, page }: {
 	page?: { image: string; size?: ImageSize };
 }) {
 	if (!page?.size) {
-		return <img className={styles.cropImage} src={box.image} alt="The part of the page in this box" />;
+		// Until the page's size is known, the box's own image, if the server
+		// sent it, or room for the page's
+		return box.image
+			? <img className={styles.cropImage} src={box.image} alt="The part of the page in this box" />
+			: <div className={styles.cropImage} />;
 	}
 	const { size } = page;
 	// A few pixels each side, more for a bigger box
