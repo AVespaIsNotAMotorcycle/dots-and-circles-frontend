@@ -1,0 +1,105 @@
+/* Under a page's result: the button, and why it can't be pressed yet */
+.submit {
+	display: flex;
+	flex-direction: column;
+	align-items: flex-start;
+	gap: .375rem;
+	padding-top: 1rem;
+	border-top: 1px solid #ddd;
+}
+.submit button:disabled, .dialog button:disabled {
+	opacity: .5;
+	pointer-events: none;
+}
+.hint {
+	margin: 0;
+	color: grey;
+	font-size: .875rem;
+}
+/* A button that reads as a link, in the hint */
+.submit button.link {
+	padding: 0;
+	border: none;
+	border-radius: 0;
+	background: none;
+	color: var(--accent);
+	text-decoration: underline;
+	font-size: inherit;
+}
+.submit button.link:hover {
+	background: none;
+	color: var(--foreground);
+}
+.thanks {
+	margin: 0;
+	border-left: 4px solid #0d9488;
+	padding-left: .5rem;
+	font-weight: 600;
+}
+
+.dialog {
+	/* Tailwind's reset removes the margin that centres a dialog */
+	margin: auto;
+	padding: 1.25rem;
+	border: 2px solid black;
+	border-radius: 5px;
+	width: min(32rem, calc(100svw - 2rem));
+	max-height: calc(100svh - 2rem);
+	overflow: auto;
+}
+.dialog::backdrop {
+	background: rgba(0, 0, 0, .5);
+}
+/* globals.css makes forms fit their content */
+.dialog form {
+	width: auto;
+	gap: 1rem;
+}
+.dialog h4 {
+	font-size: 1.25rem;
+	font-weight: 800;
+}
+.agree {
+	display: flex;
+	gap: .625rem;
+	align-items: flex-start;
+	line-height: 1.45;
+}
+.agree input {
+	flex: none;
+	width: 1.125rem;
+	height: 1.125rem;
+	margin: .15rem 0 0;
+	padding: 0;
+	accent-color: var(--accent);
+}
+.note {
+	display: flex;
+	flex-direction: column;
+	gap: .375rem;
+}
+.note textarea {
+	width: 100%;
+	padding: .5rem;
+	border: 2px solid var(--color-foreground);
+	border-radius: 5px;
+	resize: vertical;
+}
+.optional {
+	color: grey;
+}
+.error {
+	margin: 0;
+	color: red;
+}
+.buttons {
+	display: flex;
+	justify-content: flex-end;
+	gap: .5rem;
+}
+.buttons button {
+	padding: .375rem .75rem;
+}
+.dialog .buttons button[type="submit"] {
+	align-self: auto;
+}

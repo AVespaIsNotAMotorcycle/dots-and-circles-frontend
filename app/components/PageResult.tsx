@@ -828,7 +828,7 @@ function Legend({ compared, lowConfidence, other, flagged, corrected }: {
 // transcription)
 export default function PageResult({
 	page, expected = '', title = 'Page', id, onReread, rereadNote, corrections = {}, onCorrect,
-	confirmed = {}, onConfirm, boxId, onBoxClosed,
+	confirmed = {}, onConfirm, boxId, onBoxClosed, children,
 }: {
 	page: ReadPage;
 	expected?: string;
@@ -856,6 +856,8 @@ export default function PageResult({
 	// user settled its reading: picked one, marked the model's right, or
 	// marked it as not Manchu
 	onBoxClosed?: (ruled: boolean) => void;
+	// Shown at the end, such as a way to submit the page
+	children?: React.ReactNode;
 }) {
 	const random = 'transcription' in page ? page : undefined;
 	const [romanization] = useRomanization();
@@ -1039,6 +1041,7 @@ export default function PageResult({
 					inNorman={romanization === 'norman'}
 				/>
 			)}
+			{children}
 		</section>
 	);
 }

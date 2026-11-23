@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 
+import { CONTACT_FORM } from '../site';
 import styles from './about.module.css';
 
 export const metadata: Metadata = {
@@ -23,18 +24,20 @@ export default function AboutPage() {
 				{' for automatically transcribing scans of Manchu documents. Its reading model is a sequence of 12 transformers with linear layers at each end, trained on rendered fonts and photographed words of print. The code, and how the model scores on test sets, are '}
 				<a href={GITHUB}>on GitHub</a>
 				.
-				{' Nothing you upload or input is saved anywhere but in your browser.'}
+				{' Nothing you upload or input leaves your browser except to be read, and nothing is kept, unless you choose to submit a checked page for training. Submitted pages are kept privately and used only to improve the model.'}
 			</p>
 
 			<section aria-labelledby="feedback">
 				<h2 id="feedback">Feedback</h2>
 				<p>
 					Feedback is welcome, and wanted, especially for missing features
-					for this site. I am aware of the model's poor performance on
+					for this site. I am aware of the model&apos;s poor performance on
 					handwritten text, and am working on a platform for crowdsourcing
 					a publicly available dataset of labelled handwritten words.
-					For anything else that would improve this tool, please write to
+					For anything else that would improve this tool, please
 					{' '}
+					<a href={CONTACT_FORM} target="_blank" rel="noreferrer">send feedback</a>
+					{' through the form, or write to '}
 					<a href={`mailto:${EMAIL}`}>{EMAIL}</a>
 					.
 				</p>

@@ -4,7 +4,9 @@
 import { flaggedBoxes } from './pagecompare';
 import { romanize, romanizeText, toManchu } from './romanization';
 import type { Romanization } from './romanization';
-import type { ClosestWord, Confirmed, Correction, Corrections, Page, PageBox } from './types';
+import type {
+	ClosestWord, Confirmed, Correction, Corrections, InitialBox, Page, PageBox, SubmittedBox,
+} from './types';
 
 // What a page's text and readings can be shown in
 export type Script = 'manchu' | Romanization;
@@ -164,3 +166,27 @@ export function pageText(page: Page, corrections: Corrections,
 		.filter((line) => withOther || line)
 		.join('\n');
 }
+
+// A page's boxes as the server first gave them, to send with a submission
+export const initialBoxes = (boxes: PageBox[]): InitialBox[] => boxes.map(({
+	x, y, w, h, kind, 'prediction-manchu': prediction,
+}) => ({ x, y, w, h, kind, 'prediction-manchu': prediction }));
+
+// A page's boxes as the user left them, for POST /submissions: each Manchu
+// box with what they did with it and its text in Manchu script. Without the
+// boxes' images, to keep the request small.
+export const submittedBoxes = (page: Page, corrections: Corrections = {},
+	confirmed: Confirmed = {}): SubmittedBox[] => page.boxes.map((box) => {
+	const { x, y, w, h } = box;
+	if (box.kind === 'other') return { x, y, w, h, kind: 'other' };
+	const key = boxKey(box);
+	const correction = corrections[key];
+	const prediction = box['prediction-manchu'];
+	const manchu = (status: 'corrected' | 'confirmed' | 'unflagged' | 'not-manchu',
+		text: string | null): SubmittedBox => ({
+		x, y, w, h, kind: 'manchu', status, text, 'prediction-manchu': prediction,
+	});
+	if (correction?.notManchu) return manchu('not-manchu', null);
+	if (correction) return manchu('corrected', correction.manchu);
+	return manchu(confirmed[key] ? 'confirmed' : 'unflagged', prediction ?? '');
+});

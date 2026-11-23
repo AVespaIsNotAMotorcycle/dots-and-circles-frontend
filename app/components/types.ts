@@ -164,3 +164,22 @@ export type Corrections = Record<string, Correction>;
 // The boxes of a page whose flagged reading the user marked as right, by
 // boxKey
 export type Confirmed = Record<string, true>;
+
+// A box as the server first gave a page, before any edits, sent with a
+// submission as initial-boxes
+export type InitialBox = Pick<PageBox, 'x' | 'y' | 'w' | 'h' | 'kind' | 'prediction-manchu'>;
+
+// A box sent to POST /submissions, as the user left it: what they did with
+// a Manchu box, and its text in Manchu script (null for one they said isn't
+// Manchu)
+export type SubmittedBox = { x: number; y: number; w: number; h: number } & (
+	| { kind: 'other' }
+	| {
+		kind: 'manchu';
+		status: 'corrected' | 'confirmed' | 'unflagged' | 'not-manchu';
+		text: string | null;
+		'prediction-manchu': string | null;
+	});
+
+// The body of a successful POST /submissions
+export type SubmissionResponse = { id: string };

@@ -14,11 +14,13 @@ import SaveText from './SaveText';
 import { shrinkForUpload } from './shrink';
 import { loadChecks, pageKey, saveChecks } from './savedChecks';
 import UploadForm from './UploadForm';
-import { boxKey, unresolvedFlags } from './corrections';
+import { boxKey, initialBoxes, submittedBoxes, unresolvedFlags } from './corrections';
+import SubmitCorrections from './SubmitCorrections';
 import { flaggedBoxes } from './pagecompare';
 import FlaggedWords from './FlaggedWords';
 import type {
-	Confirmed, Correction, Corrections, EditedBox, ErrorResponse, Page, PageBox, SamplePage,
+	Confirmed, Correction, Corrections, EditedBox, ErrorResponse, InitialBox, Page, PageBox,
+	SamplePage, SubmissionResponse,
 } from './types';
 
 const BACKEND = process.env.NEXT_PUBLIC_BACKEND
@@ -45,13 +47,29 @@ type Reading = {
 	// Where those are kept in this browser: from the page as first read, so
 	// it stays the same when it's read again in edited boxes
 	storageKey?: string;
+	// The boxes the server first gave the page, before any edits, which
+	// outlast reading it again in edited boxes, to send with a submission
+	initialBoxes?: InitialBox[];
+	// The page as last submitted for training, with its id from the server,
+	// so it isn't sent twice by accident (but can be once it's changed)
+	submitted?: { id: string; as: string };
 };
+
+// What a page would be submitted as, to tell whether it's changed since it
+// was: its boxes, with the user's checks, and its angle
+const submissionOf = ({ result, corrections, confirmed }: Reading) => JSON.stringify({
+	angle: result?.angle,
+	boxes: result && submittedBoxes(result, corrections, confirmed),
+});
 
 // A page just read, with any checks kept for it from before
 function newReading(reading: Omit<Reading, 'storageKey'>): Reading {
 	if (!reading.result) return reading;
 	const storageKey = pageKey(reading.result.image);
-	return { ...reading, ...loadChecks(storageKey), storageKey };
+	return {
+		...reading, ...loadChecks(storageKey), storageKey,
+		initialBoxes: initialBoxes(reading.result.boxes),
+	};
 }
 
 // The data-box-id of box index of readings[reading]'s page
@@ -117,6 +135,7 @@ async function withRetries<T>(send: () => Promise<T>, { wanted, onBusy }: Retryi
 // And gives up on a request after a minute, to try it again: Heroku has
 // given up on it by then.
 const REQUEST = { params: { crops: 'false' }, timeout: 60_000 };
+const SUBMIT_REQUEST = { timeout: 60_000 };
 
 // Sends an image of a page to be read, shrunk first if it's big, and gives
 // the image sent with the reading, to send again to read edited boxes
@@ -293,6 +312,60 @@ export default function Demo({ backendAwake = false }: {
 			});
 	};
 
+	// Sends readings[index]'s page, its boxes as the user left them, with
+	// their checks, and the boxes first read, to be kept for training, sent as
+	// for reading edited boxes. Rejects with why it couldn't be.
+	const submit = (index: number, note: string) => {
+		const current = run.current;
+		const reading = readings[index];
+		const { result: page, sent, corrections, confirmed } = reading;
+		if (!page) return Promise.reject(new Error('There\'s no page to submit.'));
+		const as = submissionOf(reading);
+		const boxes = submittedBoxes(page, corrections, confirmed);
+		const first = reading.initialBoxes;
+		const url = `${BACKEND}/submissions`;
+		const send = () => {
+			if (sent) {
+				const body = new FormData();
+				body.append('image', sent);
+				body.append('angle', String(page.angle));
+				body.append('boxes', JSON.stringify(boxes));
+				if (first) body.append('initial-boxes', JSON.stringify(first));
+				body.append('consent', 'true');
+				body.append('model', page.model);
+				if (note) body.append('note', note);
+				return axios.post<SubmissionResponse>(url, body, SUBMIT_REQUEST);
+			}
+			const rest = {
+				boxes,
+				...(first && { 'initial-boxes': first }),
+				consent: true,
+				model: page.model,
+				...(note && { note }),
+			};
+			if ('name' in page) {
+				return axios.post<SubmissionResponse>(url,
+					{ name: page.name, angle: page.angle, ...rest }, SUBMIT_REQUEST);
+			}
+			// Nothing else to send it by: the page as shown, taken as straightened
+			return axios.post<SubmissionResponse>(url, { image: page.image, ...rest }, SUBMIT_REQUEST);
+		};
+		return withRetries(send, { wanted: () => current === run.current, onBusy: () => {} })
+			.then(({ data }) => {
+				if (current !== run.current) return;
+				setReadings((previous) => previous.map((one, i) => (
+					i === index ? { ...one, submitted: { id: data.id, as } } : one)));
+			})
+			.catch((error) => {
+				const status = axios.isAxiosError(error) ? error.response?.status : undefined;
+				throw new Error(status === 404
+					? 'Submissions aren\'t available right now.'
+					: status === 413
+						? 'This page is too large to submit.'
+						: errorMessage(error, 'Couldn\'t submit the page. Try again in a minute.'));
+			});
+	};
+
 	// Puts the user's word for a box of readings[index]'s page in place of
 	// the model's, or goes back to the model's for undefined
 	const correct = (index: number, box: PageBox, correction?: Correction) => {
@@ -348,6 +421,14 @@ export default function Demo({ backendAwake = false }: {
 			checking.current = false;
 			return;
 		}
+		checking.current = true;
+		setLastChecked(next);
+		openBox(boxId(next.reading, next.box));
+	};
+	// Opens the first word to check on readings[index]'s page
+	const nextOnPage = (index: number) => {
+		const next = toCheck.find(({ reading }) => reading === index);
+		if (!next) return;
 		checking.current = true;
 		setLastChecked(next);
 		openBox(boxId(next.reading, next.box));
@@ -448,29 +529,12 @@ export default function Demo({ backendAwake = false }: {
 				<PdfSummary readings={readings} pages={pdfPages} pageId={pdfPageId} />
 			)}
 			<SaveText readings={readings} name={saveName} />
-			{readings.map(({
-				title, result, expected, error: problem, corrections, confirmed,
-			}, index) => (
-				result
-					? (
-						<PageResult
-							key={index}
-							page={result}
-							expected={expected}
-							title={title}
-							id={pdfPages !== undefined ? pdfPageId(index + 1) : undefined}
-							onReread={(boxes) => reread(index, boxes)}
-							rereadNote={rereadRetrying === index
-								? 'The server is busy. Trying again…' : undefined}
-							corrections={corrections}
-							onCorrect={(box, correction) => { correct(index, box, correction); }}
-							confirmed={confirmed}
-							onConfirm={(box, yes) => { confirm(index, box, yes); }}
-							boxId={(box) => boxId(index, box)}
-							onBoxClosed={onBoxClosed}
-						/>
-					)
-					: (
+			{readings.map((reading, index) => {
+				const {
+					title, result, expected, error: problem, corrections, confirmed, submitted,
+				} = reading;
+				if (!result) {
+					return (
 						<section
 							key={index}
 							className={styles.failedPage}
@@ -479,8 +543,37 @@ export default function Demo({ backendAwake = false }: {
 							<h3>{title}</h3>
 							<p className={styles.error}>{problem}</p>
 						</section>
-					)
-			))}
+					);
+				}
+				// Whether it's been submitted as it is now
+				const unchanged = submitted?.as === submissionOf(reading);
+				return (
+					<PageResult
+						key={index}
+						page={result}
+						expected={expected}
+						title={title}
+						id={pdfPages !== undefined ? pdfPageId(index + 1) : undefined}
+						onReread={(boxes) => reread(index, boxes)}
+						rereadNote={rereadRetrying === index
+							? 'The server is busy. Trying again…' : undefined}
+						corrections={corrections}
+						onCorrect={(box, correction) => { correct(index, box, correction); }}
+						confirmed={confirmed}
+						onConfirm={(box, yes) => { confirm(index, box, yes); }}
+						boxId={(box) => boxId(index, box)}
+						onBoxClosed={onBoxClosed}
+					>
+						<SubmitCorrections
+							left={toCheck.filter((word) => word.reading === index).length}
+							onNextFlag={() => { nextOnPage(index); }}
+							submitted={unchanged}
+							changed={Boolean(submitted) && !unchanged}
+							onSubmit={(note) => submit(index, note)}
+						/>
+					</PageResult>
+				);
+			})}
 			<FlaggedWords
 				left={toCheck.length}
 				total={flagged.length}

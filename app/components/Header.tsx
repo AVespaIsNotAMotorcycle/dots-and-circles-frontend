@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useRef, useState } from 'react';
 
+import { CONTACT_FORM } from '../site';
 import { ROMANIZATION_NAMES } from './romanization';
 import type { Romanization } from './romanization';
 import { useRomanization } from './RomanizationContext';
@@ -82,7 +83,10 @@ export default function Header() {
 								</button>
 							))}
 						</div>
-						{/* In a span, so its room for the underline doesn't make the row taller */}
+						{/* In spans, so their room for the underline doesn't make the row taller */}
+						<span>
+							<a href={CONTACT_FORM} target="_blank" rel="noreferrer">Feedback</a>
+						</span>
 						<span>
 							<a href={GITHUB} target="_blank" rel="noreferrer">GitHub</a>
 						</span>
