@@ -1,0 +1,26 @@
+/* A quiet note of what the reader can't do well, which can be closed */
+.limitations {
+	margin: 1rem 0 .5rem;
+	padding: .75rem 1rem;
+	border-left: 4px solid #e6b800;
+	border-radius: 0 5px 5px 0;
+	background: #fffbea;
+	font-size: .9375rem;
+}
+.limitations summary {
+	cursor: pointer;
+	width: fit-content;
+}
+.limitations h2 {
+	display: inline;
+	font-size: 1rem;
+	font-weight: 700;
+}
+.limitations ul {
+	margin-top: .375rem;
+	list-style: disc;
+	padding-left: 1.25rem;
+}
+.limitations li + li {
+	margin-top: .25rem;
+}
