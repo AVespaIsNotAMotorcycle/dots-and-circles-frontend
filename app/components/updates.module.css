@@ -1,0 +1,52 @@
+/* What's changed since the last visit, at the top of the page */
+.updates {
+	margin: 0 0 1rem;
+	padding: .75rem 1rem;
+	border-left: 4px solid var(--accent);
+	border-radius: 0 5px 5px 0;
+	background: var(--accent-soft);
+	font-size: .9375rem;
+	line-height: 1.5;
+}
+.heading {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: .5rem;
+}
+.heading h2 {
+	margin: 0;
+	font-size: 1rem;
+	font-weight: 700;
+}
+.dismiss {
+	width: 1.75rem;
+	height: 1.75rem;
+	flex-shrink: 0;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	padding: 0;
+	border: none;
+	border-radius: 5px;
+	background: none;
+	font-size: 1.25rem;
+	line-height: 1;
+	cursor: pointer;
+}
+.dismiss:hover,
+.dismiss:focus-visible {
+	background: var(--accent-soft);
+}
+.update {
+	margin-top: .75rem;
+}
+.update h3 {
+	margin: 0 0 .25rem;
+	font-size: .875rem;
+	font-weight: 600;
+	opacity: .8;
+}
+.update p + p {
+	margin-top: .375rem;
+}
